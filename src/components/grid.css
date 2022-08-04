@@ -1,0 +1,52 @@
+.cell {
+	width: 30px;
+	height: 30px;
+	border: solid 1px;
+	display: block;
+}
+
+/* normal cell */
+.type1 {
+	background-color: white;
+}
+
+/*blocked cell */
+.type2 {
+	background-color: #363636;
+	border: transparent;
+	animation-duration: .1s;
+	animation-name: grow;
+}
+
+/* start cell */
+.type3 {
+	background-color: green;
+}
+
+/* end cell */
+.type4 {
+	background-color: red;
+}
+
+.cell:hover {
+	border-color: red;
+}
+
+.gridGraph {
+	border-collapse: collapse;
+	border: 3px solid black;
+	margin: 0 auto;
+}
+
+.gridGraphCell {
+	padding: 0px;
+}
+
+@keyframes grow {
+	from {
+		transform: scale(0);
+	}
+	to {
+		transform: scale(1);
+	}
+}

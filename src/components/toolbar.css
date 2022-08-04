@@ -1,0 +1,24 @@
+ul {
+	background-color: #2a365e;
+	margin: 0;
+	padding: 0;
+}
+
+ul > li {
+	display: inline-block;
+}
+
+ul > li > button {
+	background-color: transparent;
+	border: transparent;
+	color: white;
+	font-size: 36px;
+}
+
+ul > li > button:hover {
+	cursor: pointer;
+	color: gray;
+}
+
+ul > li > button:active {
+}
