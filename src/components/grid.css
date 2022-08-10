@@ -28,6 +28,16 @@
 	background-color: red;
 }
 
+.type5 {
+	animation-name: explored;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+}
+
+.type6 {
+	background-color: black;
+}
+
 .cell:hover {
 	border-color: red;
 }
@@ -48,5 +58,14 @@
 	}
 	to {
 		transform: scale(1);
+	}
+}
+
+@keyframes explored {
+	from {
+		background-color: #f9ff50;
+	}
+	to {
+		background-color: #71deec;
 	}
 }
