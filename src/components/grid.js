@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useReducer } from 'react';
-import GridGraph, { GridNode, NodeType, setNodeType } from './../data/gridGraph.js';
+import { NodeType } from '../node.js';
 import './grid.css';
 
 function Grid(props) {
@@ -51,7 +51,9 @@ function Cell(props) {
 			className={"cell type" + props.value.type}
 			onMouseDown={handleMouseEvent}
 			onMouseEnter={handleMouseEvent}
+			onMouseUp={handleMouseEvent}
 			onContextMenu={handleContext}>
+		{props.value.row * 60 + props.value.col}
 		</button>
 	);
 }

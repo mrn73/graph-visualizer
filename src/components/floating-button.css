@@ -1,0 +1,11 @@
+.floating-button {
+	font-size: 30px;
+	position: fixed;
+
+	/* center element */
+	left: 50%;
+	transform: translateX(-50%);
+
+	bottom: 10px;
+	z-index: 2;
+}

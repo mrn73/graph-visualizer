@@ -3,11 +3,13 @@ import './toolbar.css';
 
 function NavBar(props) {
 	return (
-		<ul>
-			{props.children.map((elem, i) => 
-				<li key={i}>{elem}</li>
-			)}
-		</ul>
+		<div>
+			<ul>
+				{props.children.map((elem, i) => 
+					<li key={i}>{elem}</li>
+				)}
+			</ul>
+		</div>
 	);
 }
 

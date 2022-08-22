@@ -1,8 +1,14 @@
 .cell {
 	width: 30px;
 	height: 30px;
-	border: solid 1px;
+	border: transparent;
 	display: block;
+	position: relative;
+}
+
+.cell:hover {
+	box-shadow: 0px 0px 3px 2px black;
+	z-index: 2;
 }
 
 /* normal cell */
@@ -15,7 +21,7 @@
 	background-color: #363636;
 	border: transparent;
 	animation-duration: .1s;
-	animation-name: grow;
+	animation-name: shrink;
 }
 
 /* start cell */
@@ -28,18 +34,16 @@
 	background-color: red;
 }
 
+/* explored cell */
 .type5 {
 	animation-name: explored;
 	animation-duration: 1s;
 	animation-fill-mode: forwards;
 }
 
+/* path */
 .type6 {
-	background-color: black;
-}
-
-.cell:hover {
-	border-color: red;
+	background-color: yellow;
 }
 
 .gridGraph {
@@ -49,6 +53,8 @@
 }
 
 .gridGraphCell {
+	border: solid black;
+	border-width: .5px;
 	padding: 0px;
 }
 
@@ -61,11 +67,22 @@
 	}
 }
 
+@keyframes shrink {
+	from {
+		transform: scale(1.4);
+	}
+	to {
+		transform: scale(1);
+	}
+}
+
 @keyframes explored {
 	from {
+		transform: scale(0);
 		background-color: #f9ff50;
 	}
 	to {
+		transform: scale(1);
 		background-color: #71deec;
 	}
 }
