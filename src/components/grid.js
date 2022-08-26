@@ -53,7 +53,6 @@ function Cell(props) {
 			onMouseEnter={handleMouseEvent}
 			onMouseUp={handleMouseEvent}
 			onContextMenu={handleContext}>
-		{props.value.row * 60 + props.value.col}
 		</button>
 	);
 }

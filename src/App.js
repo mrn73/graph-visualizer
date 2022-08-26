@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useEffect, useReducer, useRef } from 'react';
 import './App.css';
 import Grid from './components/grid.js';
 import Toolbar from './components/toolbar.js';
+import DropDown from './components/dropdown.js';
 import FloatingButton from './components/floating-button.js';
 import { NodeType } from './node.js';
 import bfs from './algorithms/bfs.js';
@@ -177,6 +178,7 @@ function App() {
 	const [search, setSearch] = useState("none");
 	const [movingSrc, setMovingSrc] = useState(false);
 	const [movingDst, setMovingDst] = useState(false);
+	const timeoutInfo = useRef({timeouts: new Map(), longest: 0});
 
 	const updateGridCell = (i, j, e, mouseState) => {
 		if (e.type === 'mouseup' && movingSrc == true) {
@@ -229,52 +231,142 @@ function App() {
 			const {i, j} = coords(index);
 			updateGridCell(i, j, {type: 'reset'});
 		});	
+		for (const timeout of timeoutInfo.current.timeouts.keys()) {
+			clearTimeout(timeout);
+		}
+		timeoutInfo.current = {timeouts: new Map(), longest: 0};
 	}
 
-	const doSearch = () => {
+	/*
+	useEffect(() => {
+		if (search !== "none") {
+			doSearch(false);
+		}
+	}, [gridState.src, gridState.dst]);
+	*/
+
+	const doSearch = (animate=true) => {
 		clearSearch();
 		let result;
 		switch (search) {
 			case "BFS":
 				result = bfs(gridState.nodes, gridState.src, gridState.dst);
+				visualizeNormal(result.visited, result.path, animate);
 				break;
 			case "DFS":
 				result = dfs(gridState.nodes, gridState.src, gridState.dst, true);
+				visualizeNormal(result.visited, result.path, animate);
 				break;
 			case "IDDFS":
-				result = iddfs(gridState.nodes, gridState.src, gridState.dst, 25);
-				//visualizeIteration(result.iterations);
+				result = iddfs(gridState.nodes, gridState.src, gridState.dst, 100);
+				visualizeIDDFS(result.iterations, result.visited, result.path, animate);
 				break;
 			case "BDS":
-				//result = bidirectionalSearch(gridState.nodes, gridState.src, gridState.dst);
+				result = bidirectionalSearch(gridState.nodes, gridState.src, gridState.dst);
+				visualizeBidirectional(result.visited1, result.visited2, result.path, animate);
 				break;
 
 		}
-		visualize(result.visited, result.path);
+		//visualize(result.visited, result.path, animate);
 	}
 
-	/* TODO: Generalize this function
-	 * 	- "visited" should be an array of arrays, where each element of an array
-	 * 	  is drawn with a delay and there's an additional delay between the arrays 
-	 * 	  themselves.
-	 * 	- Add an "animate" option -- enabled adds delays; disabled draws all at once.
+	const visualizeNormal = (visited, path, animate=true) => {
+		draw({type: "visited", list: visited}, 0, animate);
+		drawAfter({type: "path", list: path}, 1000, animate);
+	}
+
+	const visualizeBidirectional = (visitedSrc, visitedDst, path, animate=true) => {
+		draw({type: "visited", list: visitedSrc}, 0, animate);
+		draw({type: "visited", list: visitedDst}, 0, animate);
+		drawAfter({type: "path", list: path}, 1000, animate);
+	}
+
+	const visualizeIDDFS = (visitedIterations, visitedFinal, path, animate=true) => {
+		let i = 0;
+		for (const iteration of visitedIterations) { 
+			const delay = i > 0 ? 1000 : 0;
+			if (i > 0) {
+				setTimeout(() => {
+					gridState.nodes.flat().forEach((_, index) => {
+						const {i, j} = coords(index);
+						updateGridCell(i, j, {type: 'reset'});
+					})	
+				}, timeoutInfo.current.longest + delay);
+			}
+			drawAfter({type: "visited", list: iteration}, delay, animate);
+			i++;
+		}
+		drawAfter({type: "visited", list: visitedFinal}, 1000, animate);
+		drawAfter({type: "path", list: path}, 1000, animate);
+	}
+	
+	/**
+	 * Updates elements in the grid after the the queued timeout with the highest timeout value
+	 * is complete.
+	 * @param {Array<number>} elements - Array of indexes to be updated.
+	 * @param {number} offset - The offset (in milliseconds) from the currently set longest timeout.
+	 * @param {boolean} animate - Draws the elements one after another if true.
 	 */
-	const visualize = (visited, path) => {
-		let delay = 0;
-		visited.forEach((elem) => 
-			setTimeout(() => {
+	const drawAfter = (elements, offset=0, animate=true) => {
+		draw(elements, timeoutInfo.current.longest + offset, animate);
+	}
+
+	/**
+	 * Updates elements in the grid.
+	 * @param {Array<number>} elements - Array of indexes to be updated.
+	 * @param {number} delay - The delay (in milliseconds) from this call to start the draw.
+	 * @param {boolean} animate - Draws the elements one after another if true.
+	 */
+	const draw = (elements, delay=0, animate=true) => {
+		for (const elem of elements.list) {
+			const {i, j} = coords(elem);
+			if (animate) {
+				if (delay > timeoutInfo.current.longest) {
+					timeoutInfo.current.longest = delay;
+				}
+				const id = setTimeout(() => {
+					updateGridCell(i, j, {type: elements.type});
+					timeoutInfo.current.timeouts.delete(id);
+				}, delay);
+				timeoutInfo.current.timeouts.set(id, delay);
+			} else {
+				updateGridCell(i, j, {type: elements.type});
+			}
+			delay += delayInc;
+		}
+	}
+
+
+	/* 
+	 * OLD WAY
+	const visualize = (visited, path, animate=true) => {
+		if (animate) {		
+			let delay = 0;
+			visited.forEach((elem) => 
+				setTimeout(() => {
+					const {i, j} = coords(elem);
+					updateGridCell(i, j, {type: 'visited'});
+				}, (delay += delayInc))
+			);
+			delay += 500;
+			path.forEach((elem) =>
+				setTimeout(() => {
+					const {i, j} = coords(elem);
+					updateGridCell(i, j, {type: 'path'});
+				}, (delay += delayInc))
+			);
+		} else {
+			for (const elem of visited) {
 				const {i, j} = coords(elem);
 				updateGridCell(i, j, {type: 'visited'});
-			}, (delay += delayInc))
-		);
-		delay += 500;
-		path.forEach((elem) =>
-			setTimeout(() => {
+			}
+			for (const elem of path) {
 				const {i, j} = coords(elem);
 				updateGridCell(i, j, {type: 'path'});
-			}, (delay += delayInc))
-		);
+			}
+		}
 	}
+	*/
 
 	/* TODO: Navbar
 	 * 	- Move all algorithm options under a dropdown menu
@@ -285,12 +377,14 @@ function App() {
 	return (
 		<div> 
 			<Toolbar>
-				<button onClick={() => setSearch("BFS")}>BFS</button>
-				<button onClick={() => setSearch("DFS")}>DFS</button>
-				<button onClick={() => setSearch("IDDFS")}>IDDFS</button>
-				<button onClick={() => setSearch("A*")}>A*</button>
-				<button onClick={() => setSearch("Jump Point Search")}>Jump Point Search</button>
-				<button onClick={() => setSearch("BDS")}>Bidirectional Search</button>
+				<DropDown title={"Algorithms"}>
+					<button onClick={() => setSearch("BFS")}>BFS</button>
+					<button onClick={() => setSearch("DFS")}>DFS</button>
+					<button onClick={() => setSearch("IDDFS")}>IDDFS</button>
+					<button onClick={() => setSearch("A*")}>A*</button>
+					<button onClick={() => setSearch("Jump Point Search")}>Jump Point Search</button>
+					<button onClick={() => setSearch("BDS")}>Bidirectional Search</button>
+				</DropDown>
 			</Toolbar>
 			<Grid grid={gridState.nodes} updateGridCell={updateGridCell} />
 			<FloatingButton onClick={doSearch}>{"Run " + search}</FloatingButton>

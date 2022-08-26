@@ -5,10 +5,10 @@ import { isBlocked, neighbors } from './4-neighbor-graph-helper.js';
  * @param {Array<Array<number>>} G - The graph being searched.
  * @param {number} s - The index of the source node.
  * @param {number} d - The index of the destination node.
- * @param {boolean} recursive - If true, use the recursive algorithm.
+ * @param {boolean} [recursive=true] - If true, use the recursive algorithm.
  * @return {{path: Array<number>, visited: Array<number>}}
  */
-function dfs(G, s, d, recursive) {
+function dfs(G, s, d, recursive=true) {
 	return recursive ? dfsRecursive(G, s, d) : dfsIterative(G, s, d);
 }
 

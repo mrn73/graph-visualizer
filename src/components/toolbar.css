@@ -12,21 +12,23 @@ ul > li {
 	display: inline-block;
 }
 
-ul > li > button {
+/* 
+ * Customizes all buttons, hyperlinks, and dropdown menu headers
+ * in the navbar
+ */
+ul > li > button, a, .dropdown-header {
 	background-color: transparent;
 	border: transparent;
 	color: white;
-	font-size: 36px;
+	font-size: 30px;
+	margin-left: 10px;
 }
 
-ul > li > button:hover {
+ul > li > button:hover, a:hover, .dropdown-header:hover {
 	cursor: pointer;
 	color: gray;
 }
 
-div {
+.navbar {
 	margin-bottom: 75px;
-}
-
-ul > li > button:active {
 }

@@ -3,9 +3,9 @@ import './toolbar.css';
 
 function NavBar(props) {
 	return (
-		<div>
+		<div className="navbar">
 			<ul>
-				{props.children.map((elem, i) => 
+				{React.Children.map(props.children, (elem, i) => 
 					<li key={i}>{elem}</li>
 				)}
 			</ul>
