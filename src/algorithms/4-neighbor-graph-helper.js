@@ -51,3 +51,26 @@ export function neighbors(G, v) {
 
 	return neighbors;
 }
+
+/*
+ * Heuristic that uses the Manhattan Distance between 2 nodes.
+ * @param {Array<Array<number>>} G - The array of nodes in the graph.
+ * @param {number} s - The index of the first node.
+ * @param {number} d - The index of the second node.
+ * @return {number} - The evaluated heuristic.
+ */
+export function h(G, s, d) {	
+	const rowSize = G[0].length;
+	const colSize = G.length;
+	const v1 = {row: Math.floor(s / rowSize), col: s % rowSize};
+	const v2 = {row: Math.floor(d / rowSize), col: d % rowSize};
+	return Math.abs(v1.row - v2.row) + Math.abs(v1.col - v2.col);
+}
+
+/**
+ * cost function to go from one node to another, given they're neighbors.
+ * TODO: can add other weights in the future
+ */
+export function c(G, v1, v2) {
+	return 1;	
+}

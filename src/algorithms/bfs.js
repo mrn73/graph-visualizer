@@ -4,7 +4,7 @@ import { isBlocked, neighbors } from './4-neighbor-graph-helper.js';
  * breadth-first search algorithm.
  * @param {Array<Array<number>>} G - The array of nodes in the graph.
  * @param {number} s - The index of the starting node in the graph.
- *			NOTE: give index as absolute position in 2D array.
+ * @param {number} d - The index of the destination in the graph.
  * @return {{path: Array<number>, visited: Array<number> }}
  */
 function bfs(G, s, d) {
