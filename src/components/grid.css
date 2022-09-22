@@ -58,6 +58,10 @@
 	padding: 0px;
 }
 
+.gridGraphCell:has(.type2) {
+	border-color: #363636;
+}
+
 @keyframes grow {
 	from {
 		transform: scale(0);

@@ -6,21 +6,31 @@ class PriorityQueue {
 
 	/**
 	 * Pushes data onto the heap.
-	 * @param {number} data - The data to be added.
+	 * @param {*} data - The data to be added.
+	 * @param {number} [priority] - The priority of the data. If no value given,
+	 * 				the priority defaults to the data's value. 
+	 * 				NOTE: if the data is not a primitive, it must
+	 * 				have a "valueOf" property implemented for proper
+	 * 				comparison if this field isn't used.
+	 * 				NOT RECOMMENDED to use this when inserting primitives.
 	 */
-	push(data) {
+	push(data, priority=undefined) {
 		//Full array; double it.
 		if (this.size == this.heap.length) {
 			this.heap = this.heap.concat(Array(this.heap.length).fill(null));
 		}
 
-		this.heap[this.size] = data;
+		if (priority == undefined) {
+			priority = data;
+		}
+
+		this.heap[this.size] = {priority, data};
 		this.size++;
 		floatUp(this.heap, this.size);
 	}
 
 	/** Removes the minimum element off the heap.
-	 * @return {number} - The smallest value.
+	 * @return {*} - The smallest value.
 	 */
 	pop() {
 		if (this.size <= 0) {
@@ -32,7 +42,7 @@ class PriorityQueue {
 		this.heap[0] = this.heap[this.size];
 		floatDown(this.heap, this.size);
 
-		return retVal;
+		return retVal.data;
 	}
 
 	getTop() {
@@ -57,7 +67,7 @@ class PriorityQueue {
  * @param {number} size - The current number of elements in the heap.
  */
 function floatUp(heap, size) {
-	for (let n = size - 1; n > 0 && heap[n] < heap[parent(n)]; n = parent(n)) {
+	for (let n = size - 1; n > 0 && heap[n].priority < heap[parent(n)].priority; n = parent(n)) {
 		const tmp = heap[n];
 		heap[n] = heap[parent(n)];
 		heap[parent(n)] = tmp;
@@ -77,13 +87,13 @@ function floatDown(heap, size) {
 
 		//If a right child exists and it's smaller than the left, 
 		//then that's the element we want to swap with.
-		if (c < (size - 1) && heap[c] > heap[c + 1]) {
+		if (c < (size - 1) && heap[c].priority > heap[c + 1].priority) {
 			c++;
 		}
 
 		//If the child we want to swap with is greater, then we're
 		//already following the min-heap property.
-		if (heap[p] < heap[c]) {
+		if (heap[p].priority < heap[c].priority) {
 			break;
 		}
 

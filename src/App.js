@@ -9,6 +9,9 @@ import bfs from './algorithms/bfs.js';
 import dfs from './algorithms/dfs.js';
 import iddfs from './algorithms/iterative-deepening.js';
 import bidirectionalSearch from './algorithms/bidirectional-bfs.js';
+import gbfs from './algorithms/greedy-best-first.js';
+import aStar from './algorithms/a-star.js';
+import hpaStar from './algorithms/hpa-star.js';
 
 const cellSize = 30;
 const rows = 25;
@@ -250,7 +253,9 @@ function App() {
 		let result;
 		switch (search) {
 			case "BFS":
+				console.time('bfs');
 				result = bfs(gridState.nodes, gridState.src, gridState.dst);
+				console.timeEnd('bfs');
 				visualizeNormal(result.visited, result.path, animate);
 				break;
 			case "DFS":
@@ -262,11 +267,29 @@ function App() {
 				visualizeIDDFS(result.iterations, result.visited, result.path, animate);
 				break;
 			case "BDS":
+				console.time('bds');
 				result = bidirectionalSearch(gridState.nodes, gridState.src, gridState.dst);
+				console.timeEnd('bds');
 				visualizeBidirectional(result.visited1, result.visited2, result.path, animate);
+				break;
+			case "GBFS":
+				console.time('gbfs');
+				result = gbfs(gridState.nodes, gridState.src, gridState.dst);
+				console.timeEnd('gbfs');
+				visualizeNormal(result.visited, result.path, animate);
+				break;
+			case "A*":
+				console.time('astar');
+				result = aStar(gridState.nodes, gridState.src, gridState.dst);
+				console.timeEnd('astar');
+				visualizeNormal(result.visited, result.path, animate);
+				break;
+			case "HPA":
+				const ag = hpaStar(gridState.nodes, gridState.src, gridState.dst, 5);
 				break;
 
 		}
+		console.log(result.path.length);
 		//visualize(result.visited, result.path, animate);
 	}
 
@@ -378,12 +401,13 @@ function App() {
 		<div> 
 			<Toolbar>
 				<DropDown title={"Algorithms"}>
-					<button onClick={() => setSearch("BFS")}>BFS</button>
-					<button onClick={() => setSearch("DFS")}>DFS</button>
-					<button onClick={() => setSearch("IDDFS")}>IDDFS</button>
+					<button onClick={() => setSearch("BFS")}>Breadth-First Search</button>
+					<button onClick={() => setSearch("DFS")}>Depth-First Search</button>
+					<button onClick={() => setSearch("GBFS")}>Greedy Best First</button>
 					<button onClick={() => setSearch("A*")}>A*</button>
-					<button onClick={() => setSearch("Jump Point Search")}>Jump Point Search</button>
-					<button onClick={() => setSearch("BDS")}>Bidirectional Search</button>
+					<button onClick={() => setSearch("IDDFS")}>IDDFS</button>
+					<button onClick={() => setSearch("HPA")}>HPA*</button>
+					<button onClick={() => setSearch("BDS")}>Bidirectional BFS</button>
 				</DropDown>
 			</Toolbar>
 			<Grid grid={gridState.nodes} updateGridCell={updateGridCell} />
