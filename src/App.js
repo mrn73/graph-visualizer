@@ -12,6 +12,7 @@ import bidirectionalSearch from './algorithms/bidirectional-bfs.js';
 import gbfs from './algorithms/greedy-best-first.js';
 import aStar from './algorithms/a-star.js';
 import hpaStar from './algorithms/hpa-star.js';
+import jps from './algorithms/jps.js';
 
 const cellSize = 30;
 const rows = 25;
@@ -287,9 +288,12 @@ function App() {
 			case "HPA":
 				const ag = hpaStar(gridState.nodes, gridState.src, gridState.dst, 5);
 				break;
+			case "JPS":
+				result = jps(gridState.nodes, gridState.src, gridState.dst);
+				break;
 
 		}
-		console.log(result.path.length);
+		console.log(result.path);
 		//visualize(result.visited, result.path, animate);
 	}
 
@@ -408,6 +412,7 @@ function App() {
 					<button onClick={() => setSearch("IDDFS")}>IDDFS</button>
 					<button onClick={() => setSearch("HPA")}>HPA*</button>
 					<button onClick={() => setSearch("BDS")}>Bidirectional BFS</button>
+					<button onClick={() => setSearch("JPS")}>Jump Point Search</button>
 				</DropDown>
 			</Toolbar>
 			<Grid grid={gridState.nodes} updateGridCell={updateGridCell} />
