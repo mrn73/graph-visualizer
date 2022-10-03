@@ -2,10 +2,37 @@ import { isBlocked, neighbors, h, c, coords, abs, dist} from './4-neighbor-graph
 import { NodeType } from '../node.js';
 import PriorityQueue from '../data-structures/priority-queue.js';
 
+/**
+ * Jump point search algorithm invented by Daniel Harabor.
+ *
+ * Specifically designed for uniform cost grids, jps lessens the amount of nodes that are added 
+ * to the priority queue by jumping from a given node until a deadend is reached or a "forced neighbor"
+ * is found. A node with forced neighbors means that it is a node of interest that must be investigated
+ * further and therefore added to the queue.
+ *
+ * General rules taken from http://users.cecs.anu.edu.au/~dharabor/data/papers/harabor-grastien-aaai11.pdf:
+ *
+ * Defintion 1: A node n is a forced neighbor of node x if:
+ * 	1. n is not a natural neighbor of x
+ * 	2. length of the path from parent(x) thru x to n is < length of the path from parent(x) to n excluding x.
+ * 	   (explained in detail above the function "prune()")
+ *
+ * Defintion 2: A node y is a jump point of x if:
+ * 	1. node y is the goal node
+ * 	2. node y has at least one neighbor that's forced according to definition 1
+ * 	3. the movement is vertical and there exists a node z that is a jump point of y, therefore making
+ * 	   y a jump point to x.
+ *
+ * @param {Array<Array<number>>} G - The array of nodes in the graph.
+ * @param {number} s - The index of the starting node in the graph.
+ * @param {number} d - The index of the destination in the graph.
+ * @return {{path: Array<number>, visited: Array<number> }}
+ */
 function jps(G, s, d) {	
 	const fringe = new PriorityQueue();
 	const visited = new Map();
 	const closed = new Set();
+	const forcedNeighbors = new Map();
 
 	fringe.push(s, h(G, s, d));
 	visited.set(s, {par: null, g: 0, h: h(G, s, d), f: h(G, s, d)});
@@ -25,9 +52,11 @@ function jps(G, s, d) {
 		closed.add(v);
 
 		const vInfo = visited.get(v);
-		console.log("BEING EXLORED: " + v + " FROM " + vInfo.par);
-		console.log(successors(G, v, vInfo.par, d));
-		for (const w of successors(G, v, vInfo.par, d)) {
+		//console.log("BEING EXLORED: " + v + " FROM " + vInfo.par);
+		const succ = successors(G, v, vInfo.par, d, forcedNeighbors);
+		//console.log("JUMP POINTS: " + JSON.stringify(succ));
+		//console.log("-------------------------------------------");
+		for (const w of succ) {
 			const cost = vInfo.g + dist(G, v, w);
 			// If a node is closed, it can no longer be updated (this is fine since our 
 			// heuristic is consistent).
@@ -46,12 +75,39 @@ function jps(G, s, d) {
 		}
 	}		
 
+	// Our current path is only composed of jump point nodes. For each pair of jump points, we find
+	// all of the nodes between them to build a continious path. "path" keeps track of the actual
+	// path, while "jPath" is the path of jump points that jps computed. Jpath is needed to properly trace
+	// back from dst to src as only jump points have a "par" value since they are the only real nodes.
 	const path = [];
-	// If we found our destination, traceback the shortest path
+	const jPath = [];
 	if (v === d) {
 		path.push(d);
-		for (let i = 1; (v = visited.get(path[i-1]).par) !== null; i++) {
-			path.push(v);
+		jPath.push(d);
+		let prev = v;
+		for (let i = 1; (v = visited.get(jPath[i-1]).par) !== null; i++) {
+			const v1 = coords(G, prev);
+			const v2 = coords(G, v);
+			const dir = direction(v1, v2);
+			if (dir == 'U') {
+				for (let row = v1.row - 1; row >= v2.row; row--) {
+					path.push(abs(G, row, v1.col));	
+				}
+			} else if (dir == 'R') {
+				for (let col = v1.col + 1; col <= v2.col; col++) {
+					path.push(abs(G, v1.row, col));
+				}
+			} else if (dir == 'D') {
+				for (let row = v1.row + 1; row <= v2.row; row++) {
+					path.push(abs(G, row, v1.col));
+				}
+			} else if (dir == 'L') {
+				for (let col = v1.col - 1; col >= v2.col; col--) {
+					path.push(abs(G, v1.row, col));
+				}
+			}
+			jPath.push(v);
+			prev = v;
 		}
 	}
 
@@ -66,15 +122,20 @@ function jps(G, s, d) {
  * @param {number} d - The index of the destination in the graph.
  * @return {Array<number>} - successors of n
  */ 
-function successors(G, n, p, d) {
+function successors(G, n, p, d, forcedNeighbors) {
 	const jumpPoints = [];
-	const adj = prune(G, coords(G, n), coords(G, p));
+	// check all immediate neighbors of n for forced neigbors. 
+	let adj = prune(G, coords(G, n), coords(G, p));
+	// if n had jump points found previously, we add those to its adjacent list. 
+	if (forcedNeighbors.has(n)) {
+		adj = adj.concat(forcedNeighbors.get(n));
+	}
+	//console.log(n + "'s pruned neighbors: " + JSON.stringify(adj));
+	// for all pruned neighbors of n, jump in those directions to find more jump points.
+	// any jump points found will be considered successors of n. 
 	for (const w of adj) {
-		const v = jump(G, n, direction(coords(G, n), coords(G, w.n)), d);
-		if (v === d) {
-			console.log("FOUND!");
-		}
-		if (v) {
+		const v = jump(G, n, direction(coords(G, n), coords(G, w.n)), d, forcedNeighbors);
+		if (v != null) {
 			jumpPoints.push(v);
 		}
 	}
@@ -119,20 +180,24 @@ function prune(G, n, p) {
 	if (dir === 'R' || dir === 'L') {
 		// if in bounds, the cell in the direction of movement is a natural neighbor.
 		const col = dir === 'R' ? n.col + 1 : n.col - 1;
-		if (col < G.length[0] && col >= 0) {
+		if (col < G[0].length && col >= 0) {
 			pruned.push({n: abs(G, n.row, col), type: 'N'});
 		}
 
-		// this col is guranteed to be in bounds because we were able to jump from p to n going x units in 
-		// direction d, so going <= x units in direction -d must be in bounds.
+		// here, parent is considered the cell in the opposite direction of movement.
+		// EX: if we're moving to the right, the cell to the left is n's parent.
 		const pCol = dir === 'R' ? n.col - 1 : n.col + 1;
 		if (pCol >= 0 && pCol < G[0].length) {
-			// if adj cell above the parent is blocked, we have to check the cell above n (forced neighbor)
-			if (n.row - 1 >= 0 && G[n.row - 1][pCol] === NodeType.BLOCKED) {
+			// if adj cell above the parent is blocked, the cell above n is a forced neighbor as long
+			// as it isn't blocked.
+			if (n.row - 1 >= 0 && G[n.row - 1][pCol] === NodeType.BLOCKED &&
+				G[n.row - 1][n.col] !== NodeType.BLOCKED) {
 				pruned.push({n: abs(G, n.row - 1, n.col), type: 'F'});
 			}
-			// if adj cell below the parent is blocked, we have to check the cell below n (forced neighbor)
-			if (n.row + 1 < G.length && G[n.row + 1][pCol] === NodeType.BLOCKED) {
+			// if adj cell below the parent is blocked, the cell below n is a forced neighbor as long
+			// as it isn't blocked.
+			if (n.row + 1 < G.length && G[n.row + 1][pCol] === NodeType.BLOCKED &&
+				G[n.row + 1][n.col] !== NodeType.BLOCKED) {
 				pruned.push({n: abs(G, n.row + 1, n.col), type: 'F'});
 			}
 		}
@@ -143,20 +208,7 @@ function prune(G, n, p) {
 		if (row < G.length && row >= 0) {
 			pruned.push({n: abs(G, row, n.col), type: 'N'});		
 		}
-
-		const pRow = dir === 'U' ? n.row + 1 : n.row - 1;
-		if (pRow >= 0 && pRow < G.length) {
-			// if adj cell left of the parent is blocked, we have to check the cell left of n (forced neighbor)
-			if (n.col - 1 >= 0 && G[pRow][n.col - 1] === NodeType.BLOCKED) {
-				pruned.push({n: abs(G, n.row, n.col - 1), type: 'F'});
-			}
-			// if adj cell right of the parent is blocked, we have to check the cell right of n (forced neighbor)
-			if (n.col + 1 < G.length[0] && G[pRow][n.col + 1] === NodeType.BLOCKED) {
-				pruned.push({n: abs(G, n.row, n.col + 1), type: 'F'});
-			}
-		}
-		
-	}
+	}	
 	return pruned;
 }
 
@@ -194,17 +246,20 @@ function direction(v1, v2) {
  * @param {number} n - Index of the node we're jumping from.
  * @param {string} dir - Direction of movement (U, D, L, R)
  * @param {number} d - Index of the destination node.
+ * @return {number} - Index of the jump point (null if none)
  */
-function jump(G, n, dir, d) {
+function jump(G, n, dir, d, forcedNeighbors) {
 	const v = step(G, n, dir);
+
 	// v is out of bounds or blocked
-	if (v === null) {
+	if (v == null) {
 		return null;
 	}
 	// v is the goal node
 	if (v === d) {
 		return v;
 	}
+	
 	// v has a forced neighbor
 	for (const adj of prune(G, coords(G, v), coords(G, n))) {
 		if (adj.type === 'F') {
@@ -213,16 +268,27 @@ function jump(G, n, dir, d) {
 			return v;
 		}
 	}
+	
 	// if we're moving vertically, we need to jump horizontally at each step
 	// looking for jump points.
 	if (dir == 'U' || dir == 'D') {
-		if (jump(G, v, 'R', d) != null || jump(G, v, 'L', d) != null) {
+		const jumpRight = jump(G, v, 'R', d, forcedNeighbors);
+		const jumpLeft = jump(G, v, 'L', d, forcedNeighbors);
+		const jumpPoints = [];
+		if (jumpRight != null) {
+			jumpPoints.push({n: jumpRight, type: 'F'});
+		}
+		if (jumpLeft != null) {
+			jumpPoints.push({n: jumpLeft, type: 'F'});
+		}
+		if (jumpPoints.length > 0) {
+			forcedNeighbors.set(v, jumpPoints);
 			return v;
 		}
 	}
 	// all conditions failed; keep moving in the same direction looking for
 	// a jump point.
-	return jump(G, v, dir, d);
+	return jump(G, v, dir, d, forcedNeighbors);
 }
 
 /**

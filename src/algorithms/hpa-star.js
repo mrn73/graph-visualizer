@@ -1,6 +1,7 @@
 import { NodeType } from '../node.js';
 import aStar from './a-star.js';
 import PriorityQueue from '../data-structures/priority-queue.js';
+import { coords, abs } from './4-neighbor-graph-helper.js';
 
 function hpaStar(G, s, d, cSize=5) {
 	const absGraph = new AbstractGraph(G, cSize);
@@ -17,12 +18,73 @@ function hpaStar(G, s, d, cSize=5) {
 		return;
 	}
 	const absPath = search(sNode, dNode);
-	console.log(absPath);
-	//const realPath = refine(G, absGraph, absPath);
+	//console.log(absPath);
+	const realPath = refinePath(G, absGraph, absPath.path);
+	//console.log(realPath);
+	return {path: realPath.path, visited: realPath.visited};
 }
 
+/**
+ * Takes a path found on the abstract graph and turns it into a path on the original grid.
+ */
 function refinePath(G, absGraph, absPath) {
-		
+	const path = [];
+	const visited = [];
+	for (let i = 1; i < absPath.length; i++) {
+		const c1 = absGraph.getCluster(absPath[i - 1]);
+		const c2 = absGraph.getCluster(absPath[i]);
+		const s1 = globalToLocal(absPath[i - 1], c1);
+		const d1 = globalToLocal(absPath[i], c1);
+		if (c1 === c2) {
+			// graph of the cluster
+			const g = graphFromCluster(G, c1);
+			// do A* on the cluster to get a path of node indices (relative to top-left of g)
+			const cPath = aStar(g, abs(g, s1.row, s1.col), abs(g, d1.row, d1.col));
+			// for each node of the path found in the cluster, convert local cluster coords
+			// to global coords.
+			for (const n of cPath.path) {
+				const nCoords = localToGlobal(coords(g, n), c1);
+				path.push(abs(G, nCoords.row, nCoords.col));
+			}
+			const cVisited = [];
+			for (const n of cPath.visited) {
+				const nCoords = localToGlobal(coords(g, n), c1);
+				//cVisited.push(abs(G, nCoords.row, nCoords.col));
+				visited.push(abs(G, nCoords.row, nCoords.col));
+			}
+			//visited.push(cVisited);
+		}
+	}
+	return {path, visited};
+}
+
+function graphFromCluster(G, c) {
+	return G.slice(c.top, c.bottom + 1).map(row => row.slice(c.left, c.right + 1));
+}
+
+/**
+ * Maps a node from a local graph within a cluster into the global graph.
+ * @param {Node} v - The node to be mapped from global to local space
+ * @param {Cluster} c - The cluster that is considered local space.
+ * @return {{row: {number}, col: {number}}}
+ */
+function localToGlobal(v, c) {
+	const row = v.row + c.top;
+	const col = v.col + c.left;
+	return {row, col};
+}
+
+/**
+ * Maps a node from the original graph into a graph of the cluster, with (0, 0) 
+ * being relative to the top left of the cluster.
+ * @param {Node} v - The node to be mapped from global to local space
+ * @param {Cluster} c - The cluster that is considered local space.
+ * @return {{row: {number}, col: {number}}}
+ */
+function globalToLocal(v, c) {
+	const row = v.row - c.top;
+	const col = v.col - c.left;
+	return {row, col};
 }
 
 class AbstractGraph {
