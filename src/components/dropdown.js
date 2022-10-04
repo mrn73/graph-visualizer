@@ -6,7 +6,6 @@ function DropDown(props) {
 		<div className="dropdown">
 			<button className="dropdown-header">
 				{props.title}
-				<img/>
 			</button>
 			<div className="dropdown-content">
 				{props.children}

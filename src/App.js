@@ -49,6 +49,21 @@ function initGrid(dim) {
 	);
 }
 
+function randomizeGrid(dim, blockedThresh=.1) {
+	const size = dim.rows * dim.cols;
+	let grid = initGrid(dim);
+	let numBlocked = 0;
+	while ((numBlocked / size) < blockedThresh) {
+		const n = Math.floor(Math.random() * size);	
+		const nCoords = coords(n);
+		if (grid.nodes[nCoords.i][nCoords.j] === NodeType.NORMAL) {
+			grid.nodes[nCoords.i][nCoords.j] = NodeType.BLOCKED;
+			numBlocked++;
+		}
+	}
+	return grid;
+}
+
 /*
  * TODO: Somehow clean up this atrocity.
  * 	 (probably have cases determine what NodeType to set, then break
@@ -173,6 +188,8 @@ function gridReducer(state, action) {
 					...state.nodes.slice(row + 1)
 				]
 			};
+		case 'randomize':
+			return randomizeGrid({rows, cols});
 		default:
 			return state;
 	}
@@ -203,7 +220,9 @@ function App() {
 				dispatch({type: 'setUnblocked', payload: {row: i, col: j}});	
 			} else if (e.type === "mouseenter" && mouseState.isHeld == true && mouseState.button == 2) {
 				dispatch({type: "setUnblocked", payload: {row: i, col: j}});
-			} 
+			} else if (e.type === "clearall") {
+				dispatch({type: 'setUnblocked', payload: {row: i, col: j}});
+			}
 		} else {
 			if (e.type === "mousedown" && e.button == 0) {
 				dispatch({type: 'setBlocked', payload: {row: i, col: j}});	
@@ -219,7 +238,7 @@ function App() {
 				dispatch({type: 'setVisited', payload: {row: i, col: j}});
 			} else if (e.type === 'path') {
 				dispatch({type: 'setPath', payload: {row: i, col: j}});
-			} else if (e.type === 'reset') {
+			} else if (e.type === 'clearsearch' || e.type === 'clearall') {
 				dispatch({type: 'setUnblocked', payload: {row: i, col: j}});
 			} else if (e.type === 'mouseenter' && movingSrc == true) {
 				dispatch({type: 'unsetSrc'});
@@ -231,15 +250,23 @@ function App() {
 		}
 	}
 
-	const clearSearch = () => {	
+	const clear = (t) => {
 		gridState.nodes.flat().forEach((_, index) => {
 			const {i, j} = coords(index);
-			updateGridCell(i, j, {type: 'reset'});
+			updateGridCell(i, j, {type: t});
 		});	
 		for (const timeout of timeoutInfo.current.timeouts.keys()) {
 			clearTimeout(timeout);
 		}
 		timeoutInfo.current = {timeouts: new Map(), longest: 0};
+	}
+
+	const clearSearch = () => {	
+		clear("clearsearch");
+	}
+
+	const clearAll = () => {
+		clear("clearall");	
 	}
 
 	/*
@@ -376,62 +403,34 @@ function App() {
 		}
 	}
 
-
-	/* 
-	 * OLD WAY
-	const visualize = (visited, path, animate=true) => {
-		if (animate) {		
-			let delay = 0;
-			visited.forEach((elem) => 
-				setTimeout(() => {
-					const {i, j} = coords(elem);
-					updateGridCell(i, j, {type: 'visited'});
-				}, (delay += delayInc))
-			);
-			delay += 500;
-			path.forEach((elem) =>
-				setTimeout(() => {
-					const {i, j} = coords(elem);
-					updateGridCell(i, j, {type: 'path'});
-				}, (delay += delayInc))
-			);
-		} else {
-			for (const elem of visited) {
-				const {i, j} = coords(elem);
-				updateGridCell(i, j, {type: 'visited'});
-			}
-			for (const elem of path) {
-				const {i, j} = coords(elem);
-				updateGridCell(i, j, {type: 'path'});
-			}
-		}
-	}
-	*/
-
-	/* TODO: Navbar
-	 * 	- Move all algorithm options under a dropdown menu
-	 * 	- Add "clear current search" button (clears only "visited" nodes)
-	 * 	- Add "reset grid" button (clears all except src and dst) 
-	 * 	- Add "new grid" button (clears ALL)
-	 */
 	return (
 		<div> 
 			<Toolbar>
 				<DropDown title={"Algorithms"}>
+					<p><b>Uninformed Searches</b></p>
+					<hr/>
 					<button onClick={() => setSearch("BFS")}>Breadth-First Search</button>
 					<button onClick={() => setSearch("DFS")}>Depth-First Search</button>
-					<button onClick={() => setSearch("GBFS")}>Greedy Best First</button>
-					<button onClick={() => setSearch("A*")}>A*</button>
-					<button onClick={() => setSearch("UCS")}>Uniform-cost Search</button>
-					<button onClick={() => setSearch("HPA")}>HPA*</button>
+					<button onClick={() => setSearch("UCS")}>Uniform-Cost Search</button>
 					<button onClick={() => setSearch("BDS")}>Bidirectional BFS</button>
+					<p><b>Informed Searches</b></p>
+					<hr/>
+					<button onClick={() => setSearch("GBFS")}>Greedy Best-First Search</button>
+					<button onClick={() => setSearch("A*")}>A*</button>
+					<button onClick={() => setSearch("HPA")}>Hierarchical Pathfinding A*</button>
 					<button onClick={() => setSearch("JPS")}>Jump Point Search</button>
 				</DropDown>
+				<button onClick={doSearch}>{"Run " + search}</button>
+				<button onClick={clearAll}>Clear Grid</button>
+				<button onClick={() => dispatch({type: 'randomize'})}>Randomize Grid</button>
 			</Toolbar>
-			<Grid grid={gridState.nodes} updateGridCell={updateGridCell} />
-			<FloatingButton onClick={doSearch}>{"Run " + search}</FloatingButton>
+			<div className="appBody">
+				<Grid grid={gridState.nodes} updateGridCell={updateGridCell} />
+			</div>
 		</div>
 	);
+	
+	//<FloatingButton onClick={doSearch}>{"Run " + search}</FloatingButton>
 }
 
 export default App;

@@ -43,8 +43,7 @@ function Cell(props) {
 	/* Disable right-click context menu */
 	const handleContext = (e) => {
 		e.preventDefault();
-	}
-	
+	}	
 
 	return (
 		<button 
@@ -53,7 +52,12 @@ function Cell(props) {
 			onMouseEnter={handleMouseEvent}
 			onMouseUp={handleMouseEvent}
 			onContextMenu={handleContext}>
-		{props.value.row * 60 + props.value.col}
+		{props.value.type === NodeType.PATH ? 
+			(<svg width={40} height={10} padding={0} margin={0}>
+				<line x1="0" y1="0" x2="25" y2="0" stroke="green" strokeWidth={20} />
+			</svg>)
+			: 
+			null}
 		</button>
 	);
 }

@@ -20,8 +20,10 @@ ul > li > button, a, .dropdown-header {
 	background-color: transparent;
 	border: transparent;
 	color: white;
-	font-size: 30px;
-	margin-left: 10px;
+	font-size: 24px;
+	margin-left: 20px;
+	margin-top: 5px;
+	margin-bottom: 5px;
 }
 
 ul > li > button:hover, a:hover, .dropdown-header:hover {
