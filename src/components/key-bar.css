@@ -1,0 +1,26 @@
+.keyCell {
+	width: 30px;
+	height: 30px;
+	display: inline-block;
+	position: relative;
+	border: 1px solid black;
+}
+
+.keyItem {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.keyItem > * {
+	display: inline-block;
+	margin: 0;
+}
+
+.keyBar {
+	display: flex;
+	justify-content: center;
+	gap: 20px;
+	margin: 5px;
+}
+

@@ -4,6 +4,8 @@ import Grid from './components/grid.js';
 import Toolbar from './components/toolbar.js';
 import DropDown from './components/dropdown.js';
 import FloatingButton from './components/floating-button.js';
+import KeyBar from './components/key-bar.js';
+import FlexBox from './components/flex-box.js';
 import { NodeType } from './node.js';
 import bfs from './algorithms/bfs.js';
 import dfs from './algorithms/dfs.js';
@@ -14,10 +16,11 @@ import aStar from './algorithms/a-star.js';
 import hpaStar from './algorithms/hpa-star.js';
 import jps from './algorithms/jps.js';
 import ucs from './algorithms/uniform-cost-search.js';
+import SearchData from './data/searchesInfo.json';
 
 const cellSize = 30;
-const rows = 25;
-const cols = 60;
+const rows = 25; //25
+const cols = 60; //60 
 const delayInc = 5;
 
 function coords(index) {
@@ -403,6 +406,7 @@ function App() {
 		}
 	}
 
+	const searchProps = SearchData[search].properties;
 	return (
 		<div> 
 			<Toolbar>
@@ -425,6 +429,13 @@ function App() {
 				<button onClick={() => dispatch({type: 'randomize'})}>Randomize Grid</button>
 			</Toolbar>
 			<div className="appBody">
+				<KeyBar>{Object.values(NodeType)}</KeyBar>
+				<h3>{SearchData[search].title}</h3>
+				{searchProps ? 
+				<FlexBox>
+					<p>Weighted: <span style={{color: searchProps.weighted ? 'green' : 'red'}}><b>{searchProps.weighted ? "YES" : "NO"}</b></span></p>
+					<p>Shortest Path: <span style={{color: searchProps.shortestPath ? 'green' : 'red'}}><b>{searchProps.shortestPath ? "YES" : "NO"}</b></span></p>
+				</FlexBox> : null}
 				<Grid grid={gridState.nodes} updateGridCell={updateGridCell} />
 			</div>
 		</div>

@@ -1,0 +1,77 @@
+{
+	"BFS": {
+		"title": "Breadth-First Search",
+		"properties": {
+			"weighted": false,
+			"shortestPath": true,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"DFS": {
+		"title": "Depth-First Search",
+		"properties": {
+			"weighted": false,
+			"shortestPath": false,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"UCS": {
+		"title": "Uniform-Cost Search (Dijkstra)",
+		"properties": {
+			"weighted": true,
+			"shortestPath": true,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"BDS": {
+		"title": "Bidirectional Breadth-First Search",
+		"properties": {
+			"weighted": false,
+			"shortestPath": true,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"GBFS": {
+		"title": "Greedy Best-First Search",
+		"properties": {
+			"weighted": false,
+			"shortestPath": false,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"A*": {
+		"title": "A*",
+		"properties": {
+			"weighted": true,
+			"shortestPath": true,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"HPA": {
+		"title": "Hierarchical Pathfinding A*",
+		"properties": {
+			"weighted": true,
+			"shortestPath": false,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"JPS": {
+		"title": "Jump Point Search",
+		"properties": {
+			"weighted": false,
+			"shortestPath": true,
+			"timeComplexity": "bigO",
+			"spaceComplexity": "bigO"
+		}
+	},
+	"none": {
+		"title": "Select a pathfinding algorithm."
+	}
+}
