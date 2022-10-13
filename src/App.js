@@ -17,6 +17,7 @@ import hpaStar from './algorithms/hpa-star.js';
 import jps from './algorithms/jps.js';
 import ucs from './algorithms/uniform-cost-search.js';
 import SearchData from './data/searchesInfo.json';
+import { generateWorld } from './algorithms/gen-world.js';
 
 const cellSize = 30;
 const rows = 25; //25
@@ -27,7 +28,14 @@ function coords(index) {
 	return {i: Math.floor(index / cols), j: index % cols}; 
 }
 
-function initGrid(dim) {
+function initGrid(dim, simplex=false) {
+	let nodes;
+	if (simplex) {		
+		nodes = generateWorld(dim.rows, dim.cols);		
+	} else {
+		nodes = Array(dim.rows).fill().map(() => new Array(dim.cols).fill(NodeType.NORMAL));
+	}
+
 	const size = dim.rows * dim.cols;
 	let src = Math.floor(Math.random() * size);
 	let dst;
@@ -35,21 +43,20 @@ function initGrid(dim) {
 		dst = Math.floor(Math.random() * size);
 	} while (dst === src);
 
+	const srcCoords = coords(src);
+	const dstCoords = coords(dst);
+	nodes[srcCoords.i][srcCoords.j] = NodeType.SRC;
+	nodes[dstCoords.i][dstCoords.j] = NodeType.DST;
+
 	return ({
 		src,
 		dst,
-		nodes: Array(dim.rows).fill(null).map((_, i) => Array(dim.cols).fill(null).map((_, j) => {
-				switch (i * dim.cols + j) {
-					case src:
-						return NodeType.SRC;
-					case dst:
-						return NodeType.DST;
-					default:
-						return NodeType.NORMAL;
-				}
-			})	
-		)}
-	);
+		nodes
+	});
+}
+
+function simplexWorld(dim) {
+	return initGrid(dim, true);
 }
 
 function randomizeGrid(dim, blockedThresh=.1) {
@@ -193,6 +200,8 @@ function gridReducer(state, action) {
 			};
 		case 'randomize':
 			return randomizeGrid({rows, cols});
+		case 'simplex':
+			return simplexWorld({rows, cols});
 		default:
 			return state;
 	}
@@ -424,9 +433,13 @@ function App() {
 					<button onClick={() => setSearch("HPA")}>Hierarchical Pathfinding A*</button>
 					<button onClick={() => setSearch("JPS")}>Jump Point Search</button>
 				</DropDown>
+				<DropDown title={"Grid"}>	
+					<button onClick={() => dispatch({type: 'randomize'})}>Randomize</button>
+					<button onClick={() => dispatch({type: 'simplex'})}>Simplex World</button>
+					<hr/>
+					<button onClick={clearAll}>Clear All</button>
+				</DropDown>
 				<button onClick={doSearch}>{"Run " + search}</button>
-				<button onClick={clearAll}>Clear Grid</button>
-				<button onClick={() => dispatch({type: 'randomize'})}>Randomize Grid</button>
 			</Toolbar>
 			<div className="appBody">
 				<KeyBar>{Object.values(NodeType)}</KeyBar>

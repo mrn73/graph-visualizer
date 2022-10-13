@@ -50,6 +50,41 @@
 	background-color: yellow;
 }
 
+/* deep water */
+.type7 {
+	background-color: #011156;
+}
+
+/* water */
+.type8 {
+	background-color: #057cfa;
+}
+
+/* sand */
+.type9 {
+	background-color: #C2B280;
+}
+
+/* forest */
+.type10 {
+	background-color: #004c1c;
+}
+
+/* grassland */
+.type11 {
+	background-color: #5be087;
+}
+
+/* rock */
+.type12 {
+	background-color: #9ea196;
+}
+
+/* snow */
+.type13 {
+	background-color: #e5e5e3;	
+}
+
 .gridGraph {
 	border-collapse: collapse;
 	border: 3px solid black;

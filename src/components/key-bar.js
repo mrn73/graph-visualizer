@@ -1,26 +1,7 @@
 import React, { useState, useEffect, useReducer } from 'react';
 import './key-bar.css';
-import { NodeType } from '../node.js';
+import { NodeType, getName } from '../node.js';
 import FlexBox from './flex-box.js';
-
-function getKeyName(type) {
-	switch (type) {
-		case 1:
-			return "Traversible";
-		case 2:
-			return "Blocked";
-		case 3:
-			return "Source";
-		case 4:
-			return "Destination";
-		case 5:
-			return "Visited";
-		case 6:
-			return "Path";
-		default:
-			return "Undefined";
-	}
-}
 
 function KeyBar(props) {
 	return (
@@ -36,7 +17,7 @@ function KeyItem(props) {
 	return (
 		<div className={"keyItem"}>
 			<button className={"keyCell type" + props.type}/>
-			<p>{getKeyName(props.type)}</p>
+			<p>{getName(props.type)}</p>
 		</div>
 	);
 }
