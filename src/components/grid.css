@@ -1,6 +1,6 @@
 .cell {
-	width: 30px;
-	height: 30px;
+	width: 25px;
+	height: 25px;
 	border: transparent;
 	display: block;
 	position: relative;
@@ -121,11 +121,10 @@
 
 @keyframes explored {
 	from {
-		transform: scale(0);
-		background-color: #f9ff50;
+		background-color: #3f21a4;
 	}
 	to {
-		transform: scale(1);
-		background-color: #71deec;
+		/*background-color: #71deec;*/
+		background-color: #a591e9;
 	}
 }

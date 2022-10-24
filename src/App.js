@@ -28,6 +28,10 @@ function coords(index) {
 	return {i: Math.floor(index / cols), j: index % cols}; 
 }
 
+function absolute(i, j) {
+	return i * cols + j;
+}
+
 function initGrid(dim, simplex=false) {
 	let nodes;
 	if (simplex) {		
@@ -43,11 +47,6 @@ function initGrid(dim, simplex=false) {
 		dst = Math.floor(Math.random() * size);
 	} while (dst === src);
 
-	const srcCoords = coords(src);
-	const dstCoords = coords(dst);
-	nodes[srcCoords.i][srcCoords.j] = NodeType.SRC;
-	nodes[dstCoords.i][dstCoords.j] = NodeType.DST;
-
 	return ({
 		src,
 		dst,
@@ -59,19 +58,19 @@ function simplexWorld(dim) {
 	return initGrid(dim, true);
 }
 
-function randomizeGrid(dim, blockedThresh=.1) {
+function randomizeGrid(dim, blockedThresh=.1, grid=null) {
 	const size = dim.rows * dim.cols;
-	let grid = initGrid(dim);
+	const newGrid = grid ? structuredClone(grid) : initGrid(dim);
 	let numBlocked = 0;
 	while ((numBlocked / size) < blockedThresh) {
 		const n = Math.floor(Math.random() * size);	
 		const nCoords = coords(n);
-		if (grid.nodes[nCoords.i][nCoords.j] === NodeType.NORMAL) {
-			grid.nodes[nCoords.i][nCoords.j] = NodeType.BLOCKED;
+		if (newGrid.nodes[nCoords.i][nCoords.j] === NodeType.NORMAL) {
+			newGrid.nodes[nCoords.i][nCoords.j] = NodeType.BLOCKED;
 			numBlocked++;
 		}
 	}
-	return grid;
+	return newGrid;
 }
 
 /*
@@ -102,7 +101,7 @@ function gridReducer(state, action) {
 					...state.nodes.slice(0, action.payload.row),
 					[
 						...state.nodes[action.payload.row].slice(0, action.payload.col),
-						NodeType.NORMAL,
+						action.payload.nodeType,
 						...state.nodes[action.payload.row].slice(action.payload.col + 1)
 					],
 					...state.nodes.slice(action.payload.row + 1)
@@ -138,77 +137,31 @@ function gridReducer(state, action) {
 			const newSrc = action.payload.row * cols + action.payload.col; 
 			return {
 				...state,
-				src: newSrc,
-				nodes: [
-					...state.nodes.slice(0, action.payload.row),
-					[
-						...state.nodes[action.payload.row].slice(0, action.payload.col),
-						NodeType.SRC,
-						...state.nodes[action.payload.row].slice(action.payload.col + 1)
-					],
-					...state.nodes.slice(action.payload.row + 1)
-				]
-			};
-		case 'unsetSrc':
-			if (state.src === null) { return state; }
-			row = Math.floor(state.src / cols);
-			col = state.src % cols;
-			return {
-				...state,
-				src: null,
-				nodes: [
-					...state.nodes.slice(0, row),
-					[
-						...state.nodes[row].slice(0, col),
-						NodeType.NORMAL,
-						...state.nodes[row].slice(col + 1)
-					],
-					...state.nodes.slice(row + 1)
-				]
+				src: newSrc
 			};
 		case 'setDst':
 			const newDst = action.payload.row * cols + action.payload.col; 
 			return {
 				...state,
-				dst: newDst,
-				nodes: [
-					...state.nodes.slice(0, action.payload.row),
-					[
-						...state.nodes[action.payload.row].slice(0, action.payload.col),
-						NodeType.DST,
-						...state.nodes[action.payload.row].slice(action.payload.col + 1)
-					],
-					...state.nodes.slice(action.payload.row + 1)
-				]
-			};
-		case 'unsetDst':
-			if (state.dst === null) { return state; }
-			row = Math.floor(state.dst / cols);
-			col = state.dst % cols;
-			return {
-				...state,
-				dst: null,
-				nodes: [
-					...state.nodes.slice(0, row),
-					[
-						...state.nodes[row].slice(0, col),
-						NodeType.NORMAL,
-						...state.nodes[row].slice(col + 1)
-					],
-					...state.nodes.slice(row + 1)
-				]
+				dst: newDst
 			};
 		case 'randomize':
-			return randomizeGrid({rows, cols});
+			//return randomizeGrid({rows, cols});
+			return randomizeGrid(action.payload.dim, action.payload.blocked, action.payload.grid);
 		case 'simplex':
-			return simplexWorld({rows, cols});
+			//return simplexWorld({rows, cols});
+			return action.payload;
+		case 'reset':
+			return action.payload;
 		default:
 			return state;
 	}
 }
 
 function App() {	
-	const [gridState, dispatch] = useReducer(gridReducer, {rows, cols}, initGrid);
+	// Unorthodox way of having a lazy useRef, since initGrid would run every time with useRef.
+	const gridRef = useState(() => ({current: initGrid({rows, cols})}))[0];
+	const [gridState, dispatch] = useReducer(gridReducer, gridRef.current);
 	const [search, setSearch] = useState("none");
 	const [movingSrc, setMovingSrc] = useState(false);
 	const [movingDst, setMovingDst] = useState(false);
@@ -219,30 +172,26 @@ function App() {
 			setMovingSrc(false);
 		} else if (e.type === 'mouseup' && movingDst == true) {
 			setMovingDst(false);
-		} else if (gridState.nodes[i][j] === NodeType.SRC) {
+		} else if (absolute(i, j) == gridState.src) {
 			if (e.type === 'mousedown' && e.button == 0) {
 				setMovingSrc(true);
 			}
-		} else if (gridState.nodes[i][j] === NodeType.DST) {
+		} else if (absolute(i, j) == gridState.dst) {
 			if (e.type === 'mousedown' && e.button == 0) {
 				setMovingDst(true);
 			}
 		} else if (gridState.nodes[i][j] === NodeType.BLOCKED) {
-			if (e.type === "mousedown" && e.button == 2) {
-				dispatch({type: 'setUnblocked', payload: {row: i, col: j}});	
-			} else if (e.type === "mouseenter" && mouseState.isHeld == true && mouseState.button == 2) {
-				dispatch({type: "setUnblocked", payload: {row: i, col: j}});
-			} else if (e.type === "clearall") {
-				dispatch({type: 'setUnblocked', payload: {row: i, col: j}});
+			if (e.type === "mousedown" && e.button == 2
+				|| e.type === "mouseenter" && mouseState.isHeld == true && mouseState.button == 2
+				|| e.type === "clearall") {
+				dispatch({type: 'setUnblocked', payload: {row: i, col: j, nodeType: gridRef.current.nodes[i][j]}});
 			}
 		} else {
 			if (e.type === "mousedown" && e.button == 0) {
 				dispatch({type: 'setBlocked', payload: {row: i, col: j}});	
 			} else if (e.type === 'mouseenter' && movingSrc == true) {
-				dispatch({type: 'unsetSrc'});
 				dispatch({type: 'setSrc', payload: {row: i, col: j}});
 			} else if (e.type === 'mouseenter' && movingDst == true) {
-				dispatch({type: 'unsetDst'});
 				dispatch({type: 'setDst', payload: {row: i, col: j}});
 			} else if (e.type === "mouseenter" && mouseState.isHeld == true && mouseState.button == 0) {
 				dispatch({type: 'setBlocked', payload: {row: i, col: j}});
@@ -251,7 +200,7 @@ function App() {
 			} else if (e.type === 'path') {
 				dispatch({type: 'setPath', payload: {row: i, col: j}});
 			} else if (e.type === 'clearsearch' || e.type === 'clearall') {
-				dispatch({type: 'setUnblocked', payload: {row: i, col: j}});
+				dispatch({type: 'setUnblocked', payload: {row: i, col: j, nodeType: gridRef.current.nodes[i][j]}});
 			} else if (e.type === 'mouseenter' && movingSrc == true) {
 				dispatch({type: 'unsetSrc'});
 				dispatch({type: 'setSrc', payload: {row: i, col: j}});
@@ -262,11 +211,29 @@ function App() {
 		}
 	}
 
-	const clear = (t) => {
-		gridState.nodes.flat().forEach((_, index) => {
-			const {i, j} = coords(index);
-			updateGridCell(i, j, {type: t});
-		});	
+	const setGrid = (t) => {
+		switch (t) {
+			case "empty":
+				gridRef.current = initGrid({rows, cols});
+				dispatch({type: "empty", payload: gridRef.current});
+				break;
+			case "randomize":
+				gridRef.current = initGrid({rows, cols});
+				console.log(gridRef.current);
+				dispatch({type: "randomize", payload: {dim: {rows, cols}, blocked: .1, grid: gridRef.current}});
+				break;
+			case "simplex":
+				gridRef.current = simplexWorld({rows, cols});
+				dispatch({type: "simplex", payload: gridRef.current});
+				break;
+		}
+		console.log(gridRef.current);
+	}
+
+	/**
+	 * Cancels all pending animations.
+	 */
+	const cancelSearch = () => {
 		for (const timeout of timeoutInfo.current.timeouts.keys()) {
 			clearTimeout(timeout);
 		}
@@ -274,20 +241,22 @@ function App() {
 	}
 
 	const clearSearch = () => {	
-		clear("clearsearch");
+		gridState.nodes.flat().forEach((_, index) => {
+			const {i, j} = coords(index);
+			updateGridCell(i, j, {type: "clearsearch"});
+		});	
+		cancelSearch();
 	}
 
 	const clearAll = () => {
-		clear("clearall");	
+		dispatch({type: "reset", payload: gridRef.current});
+		cancelSearch();
 	}
 
-	/*
 	useEffect(() => {
-		if (search !== "none") {
-			doSearch(false);
-		}
+		gridRef.current.src = gridState.src;
+		gridRef.current.dst = gridState.dst;
 	}, [gridState.src, gridState.dst]);
-	*/
 
 	const doSearch = (animate=true) => {
 		clearSearch();
@@ -302,10 +271,6 @@ function App() {
 			case "DFS":
 				result = dfs(gridState.nodes, gridState.src, gridState.dst, true);
 				visualizeNormal(result.visited, result.path, animate);
-				break;
-			case "IDDFS":
-				result = iddfs(gridState.nodes, gridState.src, gridState.dst, 100);
-				visualizeIDDFS(result.iterations, result.visited, result.path, animate);
 				break;
 			case "BDS":
 				console.time('bds');
@@ -357,25 +322,6 @@ function App() {
 	const visualizeBidirectional = (visitedSrc, visitedDst, path, animate=true) => {
 		draw({type: "visited", list: visitedSrc}, 0, animate);
 		draw({type: "visited", list: visitedDst}, 0, animate);
-		drawAfter({type: "path", list: path}, 1000, animate);
-	}
-
-	const visualizeIDDFS = (visitedIterations, visitedFinal, path, animate=true) => {
-		let i = 0;
-		for (const iteration of visitedIterations) { 
-			const delay = i > 0 ? 1000 : 0;
-			if (i > 0) {
-				setTimeout(() => {
-					gridState.nodes.flat().forEach((_, index) => {
-						const {i, j} = coords(index);
-						updateGridCell(i, j, {type: 'reset'});
-					})	
-				}, timeoutInfo.current.longest + delay);
-			}
-			drawAfter({type: "visited", list: iteration}, delay, animate);
-			i++;
-		}
-		drawAfter({type: "visited", list: visitedFinal}, 1000, animate);
 		drawAfter({type: "path", list: path}, 1000, animate);
 	}
 	
@@ -434,9 +380,10 @@ function App() {
 					<button onClick={() => setSearch("JPS")}>Jump Point Search</button>
 				</DropDown>
 				<DropDown title={"Grid"}>	
-					<button onClick={() => dispatch({type: 'randomize'})}>Randomize</button>
-					<button onClick={() => dispatch({type: 'simplex'})}>Simplex World</button>
+					<button onClick={() => setGrid("randomize")}>Randomize</button>
+					<button onClick={() => setGrid("simplex")}>Simplex World</button>
 					<hr/>
+					<button onClick={clearSearch}>Clear Search</button>
 					<button onClick={clearAll}>Clear All</button>
 				</DropDown>
 				<button onClick={doSearch}>{"Run " + search}</button>
@@ -449,7 +396,12 @@ function App() {
 					<p>Weighted: <span style={{color: searchProps.weighted ? 'green' : 'red'}}><b>{searchProps.weighted ? "YES" : "NO"}</b></span></p>
 					<p>Shortest Path: <span style={{color: searchProps.shortestPath ? 'green' : 'red'}}><b>{searchProps.shortestPath ? "YES" : "NO"}</b></span></p>
 				</FlexBox> : null}
-				<Grid grid={gridState.nodes} updateGridCell={updateGridCell} />
+				<Grid 
+					grid={gridState.nodes} 
+					start={coords(gridState.src)}
+					end={coords(gridState.dst)}
+					updateGridCell={updateGridCell}
+				/>
 			</div>
 		</div>
 	);

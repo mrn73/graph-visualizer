@@ -22,12 +22,22 @@ function Grid(props) {
 			<tbody>
 				{props.grid.map((row, i) => 
 					<tr key={i}>
-						{row.map((_, j) => 
-							<td key={j} className={"gridGraphCell"}>
-								<Cell value={{row: i, col: j, type: props.grid[i][j]}} 
-								handleAction={updateCell}/>
-							</td>
-						)}
+						{row.map((_, j) => { 
+							let type;
+							if (props.start && i == props.start.i && j == props.start.j) {
+								type = NodeType.SRC;
+							} else if (props.end && i == props.end.i && j == props.end.j) {
+								type = NodeType.DST;
+							} else {
+								type = props.grid[i][j];
+							}
+							return (
+								<td key={j} className={"gridGraphCell"}>
+									<Cell value={{row: i, col: j, type}} 
+									handleAction={updateCell}/>
+								</td>
+							)
+						})}
 					</tr>
 				)}
 			</tbody>
@@ -52,12 +62,6 @@ function Cell(props) {
 			onMouseEnter={handleMouseEvent}
 			onMouseUp={handleMouseEvent}
 			onContextMenu={handleContext}>
-		{props.value.type === NodeType.PATH ? 
-			(<svg width={40} height={10} padding={0} margin={0}>
-				<line x1="0" y1="0" x2="25" y2="0" stroke="green" strokeWidth={20} />
-			</svg>)
-			: 
-			null}
 		</button>
 	);
 }
