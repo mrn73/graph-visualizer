@@ -1,4 +1,4 @@
-import { NodeType } from '../node.js';
+import { NodeType, getDefaultWeights } from '../node.js';
 
 /**
  * Checks if a graph element is blocked.
@@ -111,5 +111,9 @@ export function h(G, s, d) {
  * TODO: can add other weights in the future
  */
 export function c(G, v1, v2) {
-	return 1;	
+	const weights = getDefaultWeights();
+	const loc = coords(G, v2);
+	//console.log(G[loc.row][loc.col]);
+	//console.log(weights[G[loc.row][loc.col]]);
+	return weights[G[loc.row][loc.col]];
 }

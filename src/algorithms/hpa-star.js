@@ -15,7 +15,7 @@ function hpaStar(G, s, d, cSize=5) {
 
 	if (!sNode || !dNode) {
 		console.log("source or destination cluster is blocked");
-		return;
+		return {path: [], visited: []};
 	}
 	const absPath = search(sNode, dNode);
 	//console.log(absPath);
@@ -195,9 +195,7 @@ function distance(G, c, n1, n2) {
 	const result = aStar(cGraph.nodes, s, d); 
 	//console.log(n1.row + ", " + n1.col + " --> " + n2.row + ", " + n2.col + " : " + result.path.length);
 
-	// substract 1 since path includes both src and dest. The real length shouldn't
-	// include dest.
-	return result.path.length - 1;
+	return result.pathWeight;
 }
 
 function makeClusterGraph(G, c) {

@@ -6,7 +6,7 @@ import DropDown from './components/dropdown.js';
 import FloatingButton from './components/floating-button.js';
 import KeyBar from './components/key-bar.js';
 import FlexBox from './components/flex-box.js';
-import { NodeType } from './node.js';
+import { NodeType, getDefaultWeights } from './node.js';
 import bfs from './algorithms/bfs.js';
 import dfs from './algorithms/dfs.js';
 import iddfs from './algorithms/iterative-deepening.js';
@@ -166,6 +166,8 @@ function App() {
 	const [movingSrc, setMovingSrc] = useState(false);
 	const [movingDst, setMovingDst] = useState(false);
 	const timeoutInfo = useRef({timeouts: new Map(), longest: 0});
+	const nodeWeight = useRef(getDefaultWeights());
+	const searchState = useRef({isSearching: false, animate: true});
 
 	const updateGridCell = (i, j, e, mouseState) => {
 		if (e.type === 'mouseup' && movingSrc == true) {
@@ -240,12 +242,17 @@ function App() {
 		timeoutInfo.current = {timeouts: new Map(), longest: 0};
 	}
 
-	const clearSearch = () => {	
-		gridState.nodes.flat().forEach((_, index) => {
-			const {i, j} = coords(index);
-			updateGridCell(i, j, {type: "clearsearch"});
-		});	
+	const clearSearch = (clearVisited, clearPath) => {	
 		cancelSearch();
+		const newGrid = structuredClone(gridState);
+		newGrid.nodes.flat().forEach((_, index) => {
+			const {i, j} = coords(index);
+			if ((clearVisited && newGrid.nodes[i][j] == NodeType.VISITED)
+				|| (clearPath && newGrid.nodes[i][j] == NodeType.PATH)) {
+				newGrid.nodes[i][j] = gridRef.current.nodes[i][j];
+			}
+		});	
+		dispatch({type: "reset", payload: newGrid});
 	}
 
 	const clearAll = () => {
@@ -253,13 +260,40 @@ function App() {
 		cancelSearch();
 	}
 
+	/**
+	 * Updates the underlying grid whenever the source or destination are changed
+	 * on the visible grid.
+	 */
 	useEffect(() => {
 		gridRef.current.src = gridState.src;
 		gridRef.current.dst = gridState.dst;
 	}, [gridState.src, gridState.dst]);
 
+
+	/**
+	 * Starts the search.
+	 * Clears the previous search which will trigger a rerender, where the search
+	 * will begin on the next render inside the useEffect below.
+	 * @param {boolean} animate - Whether or not we animate the search.
+	 */
+	const startSearch = (animate=true) => {
+		clearSearch(true, true);
+		searchState.current = {isSearching: true, animate};
+	}
+
+	/**
+	 * Performs the search trigged by startSearch.
+	 * Ensures that the search begins once the grid is cleared of the previous search.
+	 */
+	useEffect(() => {
+		if (searchState.current.isSearching) {
+			console.log(gridState.nodes);
+			doSearch(searchState.current.animate);
+			searchState.current.isSearching = false;
+		}
+	}, [gridState]);
+
 	const doSearch = (animate=true) => {
-		clearSearch();
 		let result;
 		switch (search) {
 			case "BFS":
@@ -289,6 +323,7 @@ function App() {
 				result = aStar(gridState.nodes, gridState.src, gridState.dst);
 				console.timeEnd('astar');
 				visualizeNormal(result.visited, result.path, animate);
+				console.log(result.pathWeight);
 				break;
 			case "HPA":
 				console.time('hpa');
@@ -383,10 +418,11 @@ function App() {
 					<button onClick={() => setGrid("randomize")}>Randomize</button>
 					<button onClick={() => setGrid("simplex")}>Simplex World</button>
 					<hr/>
-					<button onClick={clearSearch}>Clear Search</button>
+					<button onClick={() => clearSearch(true, true)}>Clear Search</button>
+					<button onClick={() => clearSearch(true, false)}>Clear Visited</button>
 					<button onClick={clearAll}>Clear All</button>
 				</DropDown>
-				<button onClick={doSearch}>{"Run " + search}</button>
+				<button onClick={startSearch}>{"Run " + search}</button>
 			</Toolbar>
 			<div className="appBody">
 				<KeyBar>{Object.values(NodeType)}</KeyBar>

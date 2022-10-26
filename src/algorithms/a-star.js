@@ -51,15 +51,17 @@ function aStar(G, s, d) {
 	}		
 
 	const path = [];
+	let pathWeight;
 	// If we found our destination, traceback the shortest path
 	if (v === d) {
 		path.push(d);
+		pathWeight = visited.get(d).g;
 		for (let i = 1; (v = visited.get(path[i-1]).par) !== null; i++) {
 			path.push(v);
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()]};	
+	return {path: path.reverse(), visited: [...visited.keys()], pathWeight};	
 }
 
 export default aStar;

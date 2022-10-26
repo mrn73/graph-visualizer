@@ -47,3 +47,19 @@ export function getName(t) {
 			return "Undefined";
 	}
 }
+
+export function getDefaultWeights() {
+	return {
+		1: 1,
+		3: 1,
+		4: 1,
+		7: 100,
+		8: 25,
+		9: 8,
+		10: 10,
+		11: 5,
+		12: 15,
+		13: 30
+	}
+}
+
