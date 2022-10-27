@@ -1,10 +1,10 @@
 .cell {
 	width: 25px;
 	height: 25px;
-	border: transparent;
-	display: block;
 	position: relative;
-	border: transparent;
+	border: 1px solid gray;
+	margin-right: -1px;
+	margin-bottom: -1px;
 }
 
 .cell:hover {
@@ -85,20 +85,23 @@
 	background-color: #e5e5e3;	
 }
 
-.gridGraph {
-	border-collapse: collapse;
-	border: 3px solid black;
-	margin: 0 auto;
+
+.gridContainer {
+	display: inline-grid;
+	grid-template-columns: repeat(60, 1fr);
+	background-color: gray;
 }
 
-.gridGraphCell {
-	border: solid black;
-	border-width: .5px;
-	padding: 0px;
+@keyframes driftBottom {
+	to {
+		margin-bottom: 10px;
+  	}
 }
 
-.gridGraphCell:has(.type2) {
-	border-color: #363636;
+@keyframes driftRight {
+	to {
+		margin-right: 10px;
+	}
 }
 
 @keyframes grow {
