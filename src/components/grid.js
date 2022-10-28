@@ -16,11 +16,11 @@ function Grid(props) {
 	const handleMouseUp = () => {
 		setMouseState({isHeld: false});
 	}	
-	//console.log(props.grid);
+
 	const cols = props.grid[0].length;
-	
+
 	return (
-		<div className={"grid"} 
+		<div className={"grid"} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}
 		     style={{gridTemplateColumns: "repeat(" + cols + ", 1fr)"}}>
 			{props.grid.map((row, i) => 
 				row.map((_, j) => { 
@@ -41,7 +41,6 @@ function Grid(props) {
 		</div>
 	);
 }
-
 
 function Cell(props) {
 	const handleMouseEvent = (e) => {

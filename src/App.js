@@ -19,16 +19,16 @@ import ucs from './algorithms/uniform-cost-search.js';
 import SearchData from './data/searchesInfo.json';
 import { generateWorld } from './algorithms/gen-world.js';
 
-const cellSize = 30;
-const rows = 25; //25
-const cols = 60; //60 
+const cellSize = 25;
+const rows = Math.floor(window.innerHeight / cellSize); //25
+const cols = Math.floor(window.innerWidth / cellSize); //60 
 const delayInc = 5;
 
-function coords(index) {
+function coords(index, cols) {
 	return {i: Math.floor(index / cols), j: index % cols}; 
 }
 
-function absolute(i, j) {
+function absolute(i, j, cols) {
 	return i * cols + j;
 }
 
@@ -40,7 +40,8 @@ function initGrid(dim, simplex=false) {
 		nodes = Array(dim.rows).fill().map(() => new Array(dim.cols).fill(NodeType.NORMAL));
 	}
 
-	const size = dim.rows * dim.cols;
+	//subtract 1 since our grid goes slightly over the edge of window.
+	const size = (dim.rows - 1) * (dim.cols - 1);
 	let src = Math.floor(Math.random() * size);
 	let dst;
 	do {
@@ -50,7 +51,10 @@ function initGrid(dim, simplex=false) {
 	return ({
 		src,
 		dst,
-		nodes
+		rows: dim.rows,
+		cols: dim.cols,
+		nodes,
+		terrain: structuredClone(nodes)
 	});
 }
 
@@ -64,7 +68,7 @@ function randomizeGrid(dim, blockedThresh=.1, grid=null) {
 	let numBlocked = 0;
 	while ((numBlocked / size) < blockedThresh) {
 		const n = Math.floor(Math.random() * size);	
-		const nCoords = coords(n);
+		const nCoords = coords(n, dim.cols);
 		if (newGrid.nodes[nCoords.i][nCoords.j] === NodeType.NORMAL) {
 			newGrid.nodes[nCoords.i][nCoords.j] = NodeType.BLOCKED;
 			numBlocked++;
@@ -134,51 +138,108 @@ function gridReducer(state, action) {
 				]
 			};
 		case 'setSrc':
-			const newSrc = action.payload.row * cols + action.payload.col; 
+			const newSrc = action.payload.row * state.cols + action.payload.col; 
 			return {
 				...state,
 				src: newSrc
 			};
 		case 'setDst':
-			const newDst = action.payload.row * cols + action.payload.col; 
+			const newDst = action.payload.row * state.cols + action.payload.col; 
 			return {
 				...state,
 				dst: newDst
 			};
 		case 'randomize':
-			//return randomizeGrid({rows, cols});
-			return randomizeGrid(action.payload.dim, action.payload.blocked, action.payload.grid);
+			return randomizeGrid({rows: state.rows, cols: state.cols}, action.payload);
 		case 'simplex':
-			//return simplexWorld({rows, cols});
+			return simplexWorld({rows: state.rows, cols: state.cols});
+		case 'empty':
+			return {
+				...state,
+				nodes: Array(state.rows).fill().map(() => new Array(state.cols).fill(NodeType.NORMAL)),
+				terrain: Array(state.rows).fill().map(() => new Array(state.cols).fill(NodeType.NORMAL))	
+			}
+		case 'setGrid':
 			return action.payload;
-		case 'reset':
-			return action.payload;
+		case 'resize':
+			const prevRows = state.rows;
+			const prevCols = state.cols;
+			const newState = structuredClone(state.nodes);
+			const newTerrain = structuredClone(state.terrain);
+
+			/* Shrink the grid down to fit the window. If the window wasn't shrunk, this won't do anything */
+			newState.splice(action.payload.rows);
+			newState.map((row) => row.splice(action.payload.cols));
+			newTerrain.splice(action.payload.rows);
+			newTerrain.map((row) => row.splice(action.payload.cols));
+
+			/* If src is now out of bounds, move it in bounds */
+			const srcCoords = coords(state.src, prevCols);
+			if (srcCoords.i >= action.payload.rows) {
+				srcCoords.i = action.payload.rows - 2;
+			}
+			if (srcCoords.j >= action.payload.cols) {
+				srcCoords.j = action.payload.cols - 2;
+			}
+
+			/* If dst is now out of bounds, move it in bounds */
+			const dstCoords = coords(state.dst, prevCols);
+			if (dstCoords.i >= action.payload.rows) {
+				dstCoords.i = action.payload.rows - 2;
+			}
+			if (dstCoords.j >= action.payload.cols) {
+				dstCoords.j = action.payload.cols - 2;
+			}
+
+			/* If our window is longer (more rows), add the rows to fit the height */
+			if (action.payload.rows > prevRows) {
+				const rowDif = action.payload.rows - prevRows;
+				for (let i = 0; i < rowDif; i++) {
+					newState.push(new Array(state.cols).fill(NodeType.NORMAL));
+					newTerrain.push(new Array(state.cols).fill(NodeType.NORMAL));
+				}
+			}
+			/* If our window is wider (more columns), add the columns to fit the width */
+			if (action.payload.cols > prevCols) {
+				const colDif = action.payload.cols - prevCols;
+				for (let j = 0; j < colDif; j++) {
+					newState.map((row) => row.push(NodeType.NORMAL));
+					newTerrain.map((row) => row.push(NodeType.NORMAL));
+				}
+			}
+			return {
+				src: absolute(srcCoords.i, srcCoords.j, action.payload.cols),
+				dst: absolute(dstCoords.i, dstCoords.j, action.payload.cols),
+				rows: action.payload.rows,
+				cols: action.payload.cols,
+				nodes: newState,
+				terrain: newTerrain
+			}
 		default:
 			return state;
 	}
 }
 
 function App() {	
-	// Unorthodox way of having a lazy useRef, since initGrid would run every time with useRef.
-	const gridRef = useState(() => ({current: initGrid({rows, cols})}))[0];
-	const [gridState, dispatch] = useReducer(gridReducer, gridRef.current);
+	const [gridState, dispatch] = useReducer(gridReducer, {rows, cols}, initGrid);
 	const [search, setSearch] = useState("none");
 	const [movingSrc, setMovingSrc] = useState(false);
 	const [movingDst, setMovingDst] = useState(false);
 	const timeoutInfo = useRef({timeouts: new Map(), longest: 0});
 	const nodeWeight = useRef(getDefaultWeights());
 	const searchState = useRef({isSearching: false, animate: true});
+	const container = useRef(null);
 
 	const updateGridCell = (i, j, e, mouseState) => {
 		if (e.type === 'mouseup' && movingSrc == true) {
 			setMovingSrc(false);
 		} else if (e.type === 'mouseup' && movingDst == true) {
 			setMovingDst(false);
-		} else if (absolute(i, j) == gridState.src) {
+		} else if (absolute(i, j, gridState.cols) == gridState.src) {
 			if (e.type === 'mousedown' && e.button == 0) {
 				setMovingSrc(true);
 			}
-		} else if (absolute(i, j) == gridState.dst) {
+		} else if (absolute(i, j, gridState.cols) == gridState.dst) {
 			if (e.type === 'mousedown' && e.button == 0) {
 				setMovingDst(true);
 			}
@@ -186,7 +247,7 @@ function App() {
 			if (e.type === "mousedown" && e.button == 2
 				|| e.type === "mouseenter" && mouseState.isHeld == true && mouseState.button == 2
 				|| e.type === "clearall") {
-				dispatch({type: 'setUnblocked', payload: {row: i, col: j, nodeType: gridRef.current.nodes[i][j]}});
+				dispatch({type: 'setUnblocked', payload: {row: i, col: j, nodeType: NodeType.NORMAL}});
 			}
 		} else {
 			if (e.type === "mousedown" && e.button == 0) {
@@ -202,12 +263,16 @@ function App() {
 			} else if (e.type === 'path') {
 				dispatch({type: 'setPath', payload: {row: i, col: j}});
 			} else if (e.type === 'clearsearch' || e.type === 'clearall') {
-				dispatch({type: 'setUnblocked', payload: {row: i, col: j, nodeType: gridRef.current.nodes[i][j]}});
+				dispatch({type: 'setUnblocked', 
+					payload: {
+						row: i, 
+						col: j, 
+						nodeType: gridState.terrain[i][j]
+					}
+				});
 			} else if (e.type === 'mouseenter' && movingSrc == true) {
-				dispatch({type: 'unsetSrc'});
 				dispatch({type: 'setSrc', payload: {row: i, col: j}});
 			} else if (e.type === 'mouseenter' && movingDst == true) {
-				dispatch({type: 'unsetDst'});
 				dispatch({type: 'setDst', payload: {row: i, col: j}});
 			}
 		}
@@ -216,21 +281,17 @@ function App() {
 	const setGrid = (t) => {
 		switch (t) {
 			case "empty":
-				gridRef.current = initGrid({rows, cols});
-				dispatch({type: "empty", payload: gridRef.current});
+				dispatch({type: "empty"});
 				break;
 			case "randomize":
-				gridRef.current = initGrid({rows, cols});
-				console.log(gridRef.current);
-				dispatch({type: "randomize", payload: {dim: {rows, cols}, blocked: .1, grid: gridRef.current}});
+				dispatch({type: "randomize", payload: .1});
 				break;
 			case "simplex":
-				gridRef.current = simplexWorld({rows, cols});
-				dispatch({type: "simplex", payload: gridRef.current});
+				dispatch({type: "simplex"});
 				break;
 		}
-		console.log(gridRef.current);
 	}
+
 
 	/**
 	 * Cancels all pending animations.
@@ -246,28 +307,19 @@ function App() {
 		cancelSearch();
 		const newGrid = structuredClone(gridState);
 		newGrid.nodes.flat().forEach((_, index) => {
-			const {i, j} = coords(index);
+			const {i, j} = coords(index, gridState.cols);
 			if ((clearVisited && newGrid.nodes[i][j] == NodeType.VISITED)
 				|| (clearPath && newGrid.nodes[i][j] == NodeType.PATH)) {
-				newGrid.nodes[i][j] = gridRef.current.nodes[i][j];
+				newGrid.nodes[i][j] = gridState.terrain[i][j];
 			}
 		});	
-		dispatch({type: "reset", payload: newGrid});
+		dispatch({type: "setGrid", payload: newGrid});
 	}
 
 	const clearAll = () => {
-		dispatch({type: "reset", payload: gridRef.current});
+		dispatch({type: "empty"});
 		cancelSearch();
 	}
-
-	/**
-	 * Updates the underlying grid whenever the source or destination are changed
-	 * on the visible grid.
-	 */
-	useEffect(() => {
-		gridRef.current.src = gridState.src;
-		gridRef.current.dst = gridState.dst;
-	}, [gridState.src, gridState.dst]);
 
 
 	/**
@@ -379,7 +431,7 @@ function App() {
 	 */
 	const draw = (elements, delay=0, animate=true) => {
 		for (const elem of elements.list) {
-			const {i, j} = coords(elem);
+			const {i, j} = coords(elem, gridState.cols);
 			if (animate) {
 				if (delay > timeoutInfo.current.longest) {
 					timeoutInfo.current.longest = delay;
@@ -396,9 +448,39 @@ function App() {
 		}
 	}
 
+	/**
+	 * Resize grid to fit full screen on initial load.
+	 */
+	useEffect(() => {
+		const dim = container.current.getBoundingClientRect();
+		// -1 on cellSize because margin-right/bottom = -1, so every cell is shifted left/up 1. Add 1
+		// to the rows/cols so it goes 1 extra row/col out of bounds for a full appearance.
+		const rows = Math.floor(dim.height / (cellSize - 1)) + 1;
+		const cols = Math.floor(dim.width / (cellSize - 1)) + 1;
+		dispatch({type: "resize", payload: {rows, cols}});
+	}, []);
+
+
+	useEffect(() => {
+		function setSize() {
+			const dim = container.current.getBoundingClientRect();
+			// -1 on cellSize because margin-right/bottom = -1, so every cell is shifted left/up 1. Add 1
+			// to the rows/cols so it goes 1 extra row/col out of bounds for a full appearance.
+			const rows = Math.floor(dim.height / (cellSize - 1)) + 1;
+			const cols = Math.floor(dim.width / (cellSize - 1)) + 1;
+			//console.log(dim.width);
+			//console.log("Rows: " + rows + " | Cols: " + cols);
+			dispatch({type: "resize", payload: {rows, cols}});
+		}
+		window.addEventListener("resize", setSize);
+		return () => {
+		    window.removeEventListener("resize", setSize);
+		}
+	}, []);	
+
 	const searchProps = SearchData[search].properties;
 	return (
-		<div> 
+		<div className={"appBody"}> 
 			<Toolbar>
 				<DropDown title={"Algorithms"}>
 					<p><b>Uninformed Searches</b></p>
@@ -424,7 +506,7 @@ function App() {
 				</DropDown>
 				<button onClick={startSearch}>{"Run " + search}</button>
 			</Toolbar>
-			<div className="appBody">
+			<div className={"header"}>
 				<KeyBar>{Object.values(NodeType)}</KeyBar>
 				<h3>{SearchData[search].title}</h3>
 				{searchProps ? 
@@ -432,10 +514,12 @@ function App() {
 					<p>Weighted: <span style={{color: searchProps.weighted ? 'green' : 'red'}}><b>{searchProps.weighted ? "YES" : "NO"}</b></span></p>
 					<p>Shortest Path: <span style={{color: searchProps.shortestPath ? 'green' : 'red'}}><b>{searchProps.shortestPath ? "YES" : "NO"}</b></span></p>
 				</FlexBox> : null}
+			</div>
+			<div ref={container} className={"gridContainer"}>
 				<Grid 
 					grid={gridState.nodes} 
-					start={coords(gridState.src)}
-					end={coords(gridState.dst)}
+					start={coords(gridState.src, gridState.cols)}
+					end={coords(gridState.dst, gridState.cols)}
 					updateGridCell={updateGridCell}
 				/>
 			</div>

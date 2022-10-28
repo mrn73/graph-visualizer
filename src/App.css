@@ -1,9 +1,19 @@
 .appBody {
-	margin: 0 20px 20px 20px;
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	overflow: hidden;
 }
 
-.appBody > p, h1, h2, h3 {
+.gridContainer {
+	flex-grow: 1;
+	overflow: hidden;
+	background-color: blue;
+}
+
+.header > p, h1, h2, h3 {
 	margin: 0 auto;
 	text-align: center;
 }
+
 
