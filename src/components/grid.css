@@ -86,7 +86,7 @@
 }
 
 
-.gridContainer {
+.grid {
 	display: inline-grid;
 	grid-template-columns: repeat(60, 1fr);
 	background-color: gray;
