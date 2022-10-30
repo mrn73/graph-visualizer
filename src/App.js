@@ -85,20 +85,7 @@ function randomizeGrid(dim, blockedThresh=.1, grid=null) {
 function gridReducer(state, action) {
 	let row, col;
 	switch (action.type) {
-		case 'setBlocked':
-			return {
-				...state,
-				nodes: [
-					...state.nodes.slice(0, action.payload.row),
-					[
-						...state.nodes[action.payload.row].slice(0, action.payload.col),
-						NodeType.BLOCKED,
-						...state.nodes[action.payload.row].slice(action.payload.col + 1)
-					],
-					...state.nodes.slice(action.payload.row + 1)
-				]
-			};
-		case 'setUnblocked':
+		case 'setNode':
 			return {
 				...state,
 				nodes: [
@@ -106,32 +93,6 @@ function gridReducer(state, action) {
 					[
 						...state.nodes[action.payload.row].slice(0, action.payload.col),
 						action.payload.nodeType,
-						...state.nodes[action.payload.row].slice(action.payload.col + 1)
-					],
-					...state.nodes.slice(action.payload.row + 1)
-				]
-			};
-		case 'setVisited':
-			return {
-				...state,
-				nodes: [
-					...state.nodes.slice(0, action.payload.row),
-					[
-						...state.nodes[action.payload.row].slice(0, action.payload.col),
-						NodeType.VISITED,
-						...state.nodes[action.payload.row].slice(action.payload.col + 1)
-					],
-					...state.nodes.slice(action.payload.row + 1)
-				]
-			};
-		case 'setPath':
-			return {
-				...state,
-				nodes: [
-					...state.nodes.slice(0, action.payload.row),
-					[
-						...state.nodes[action.payload.row].slice(0, action.payload.col),
-						NodeType.PATH,
 						...state.nodes[action.payload.row].slice(action.payload.col + 1)
 					],
 					...state.nodes.slice(action.payload.row + 1)
@@ -223,59 +184,13 @@ function gridReducer(state, action) {
 function App() {	
 	const [gridState, dispatch] = useReducer(gridReducer, {rows, cols}, initGrid);
 	const [search, setSearch] = useState("none");
-	const [movingSrc, setMovingSrc] = useState(false);
-	const [movingDst, setMovingDst] = useState(false);
 	const timeoutInfo = useRef({timeouts: new Map(), longest: 0});
 	const nodeWeight = useRef(getDefaultWeights());
 	const searchState = useRef({isSearching: false, animate: true});
 	const container = useRef(null);
 
-	const updateGridCell = (i, j, e, mouseState) => {
-		if (e.type === 'mouseup' && movingSrc == true) {
-			setMovingSrc(false);
-		} else if (e.type === 'mouseup' && movingDst == true) {
-			setMovingDst(false);
-		} else if (absolute(i, j, gridState.cols) == gridState.src) {
-			if (e.type === 'mousedown' && e.button == 0) {
-				setMovingSrc(true);
-			}
-		} else if (absolute(i, j, gridState.cols) == gridState.dst) {
-			if (e.type === 'mousedown' && e.button == 0) {
-				setMovingDst(true);
-			}
-		} else if (gridState.nodes[i][j] === NodeType.BLOCKED) {
-			if (e.type === "mousedown" && e.button == 2
-				|| e.type === "mouseenter" && mouseState.isHeld == true && mouseState.button == 2
-				|| e.type === "clearall") {
-				dispatch({type: 'setUnblocked', payload: {row: i, col: j, nodeType: NodeType.NORMAL}});
-			}
-		} else {
-			if (e.type === "mousedown" && e.button == 0) {
-				dispatch({type: 'setBlocked', payload: {row: i, col: j}});	
-			} else if (e.type === 'mouseenter' && movingSrc == true) {
-				dispatch({type: 'setSrc', payload: {row: i, col: j}});
-			} else if (e.type === 'mouseenter' && movingDst == true) {
-				dispatch({type: 'setDst', payload: {row: i, col: j}});
-			} else if (e.type === "mouseenter" && mouseState.isHeld == true && mouseState.button == 0) {
-				dispatch({type: 'setBlocked', payload: {row: i, col: j}});
-			} else if (e.type === 'visited') {	
-				dispatch({type: 'setVisited', payload: {row: i, col: j}});
-			} else if (e.type === 'path') {
-				dispatch({type: 'setPath', payload: {row: i, col: j}});
-			} else if (e.type === 'clearsearch' || e.type === 'clearall') {
-				dispatch({type: 'setUnblocked', 
-					payload: {
-						row: i, 
-						col: j, 
-						nodeType: gridState.terrain[i][j]
-					}
-				});
-			} else if (e.type === 'mouseenter' && movingSrc == true) {
-				dispatch({type: 'setSrc', payload: {row: i, col: j}});
-			} else if (e.type === 'mouseenter' && movingDst == true) {
-				dispatch({type: 'setDst', payload: {row: i, col: j}});
-			}
-		}
+	const updateGridCell = (i, j, type) => {
+		dispatch({type: 'setNode', payload: {row: i, col: j, nodeType: type}});	
 	}
 
 	const setGrid = (t) => {
@@ -402,14 +317,14 @@ function App() {
 	}
 
 	const visualizeNormal = (visited, path, animate=true) => {
-		draw({type: "visited", list: visited}, 0, animate);
-		drawAfter({type: "path", list: path}, 1000, animate);
+		draw({type: NodeType.VISITED, list: visited}, 0, animate);
+		drawAfter({type: NodeType.PATH, list: path}, 1000, animate);
 	}
 
 	const visualizeBidirectional = (visitedSrc, visitedDst, path, animate=true) => {
-		draw({type: "visited", list: visitedSrc}, 0, animate);
-		draw({type: "visited", list: visitedDst}, 0, animate);
-		drawAfter({type: "path", list: path}, 1000, animate);
+		draw({type: NodeType.VISITED, list: visitedSrc}, 0, animate);
+		draw({type: NodeType.VISITED, list: visitedDst}, 0, animate);
+		drawAfter({type: NodeType.PATh, list: path}, 1000, animate);
 	}
 	
 	/**
@@ -437,12 +352,12 @@ function App() {
 					timeoutInfo.current.longest = delay;
 				}
 				const id = setTimeout(() => {
-					updateGridCell(i, j, {type: elements.type});
+					updateGridCell(i, j, elements.type);
 					timeoutInfo.current.timeouts.delete(id);
 				}, delay);
 				timeoutInfo.current.timeouts.set(id, delay);
 			} else {
-				updateGridCell(i, j, {type: elements.type});
+				updateGridCell(i, j, elements.type);
 			}
 			delay += delayInc;
 		}
@@ -453,8 +368,6 @@ function App() {
 	 */
 	useEffect(() => {
 		const dim = container.current.getBoundingClientRect();
-		// -1 on cellSize because margin-right/bottom = -1, so every cell is shifted left/up 1. Add 1
-		// to the rows/cols so it goes 1 extra row/col out of bounds for a full appearance.
 		const rows = Math.floor(dim.height / (cellSize - 1)) + 1;
 		const cols = Math.floor(dim.width / (cellSize - 1)) + 1;
 		dispatch({type: "resize", payload: {rows, cols}});
@@ -464,8 +377,10 @@ function App() {
 	useEffect(() => {
 		function setSize() {
 			const dim = container.current.getBoundingClientRect();
-			// -1 on cellSize because margin-right/bottom = -1, so every cell is shifted left/up 1. Add 1
-			// to the rows/cols so it goes 1 extra row/col out of bounds for a full appearance.
+			/*
+			 * -1 on cellSize because margin-right/bottom = -1, so every cell is shifted left/up 1. Add 1
+			 * to the rows/cols so it goes 1 extra row/col out of bounds for a full appearance.
+			 */
 			const rows = Math.floor(dim.height / (cellSize - 1)) + 1;
 			const cols = Math.floor(dim.width / (cellSize - 1)) + 1;
 			//console.log(dim.width);
@@ -520,13 +435,11 @@ function App() {
 					grid={gridState.nodes} 
 					start={coords(gridState.src, gridState.cols)}
 					end={coords(gridState.dst, gridState.cols)}
-					updateGridCell={updateGridCell}
+					dispatch={dispatch}
 				/>
 			</div>
 		</div>
-	);
-	
-	//<FloatingButton onClick={doSearch}>{"Run " + search}</FloatingButton>
+	);	
 }
 
 export default App;
