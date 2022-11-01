@@ -85,6 +85,23 @@
 	background-color: #e5e5e3;	
 }
 
+.right-border {
+	/*
+	animation-name: driftRight;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	*/
+	margin-right: 5px;
+}
+
+.bottom-border {
+	/*
+	animation-name: driftBottom;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+	*/
+	margin-bottom: 5px;
+}
 
 .grid {
 	display: inline-grid;
@@ -94,13 +111,13 @@
 
 @keyframes driftBottom {
 	to {
-		margin-bottom: 10px;
+		margin-bottom: 5px;
   	}
 }
 
 @keyframes driftRight {
 	to {
-		margin-right: 10px;
+		margin-right: 5px;
 	}
 }
 

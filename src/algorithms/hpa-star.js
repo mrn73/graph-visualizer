@@ -257,8 +257,16 @@ function buildClusters(G, cSize) {
 	// NOTE: as of now, doesn't work if row and col size is not divisible by cSize
 	for (let i = 0; i < rows; i += cSize) {
 		const row = []
+		let rowSize = cSize;
+		if ((rows - i) < cSize) {
+			rowSize = rows - i;
+		}
 		for (let j = 0; j < cols; j += cSize) {
-			row.push(new Cluster(cSize, i / cSize, j / cSize, i, j));
+			let colSize = cSize;
+			if ((cols - j) < cSize) {
+				colSize = cols - j;
+			}
+			row.push(new Cluster(rowSize, colSize, i / cSize, j / cSize, i, j));
 		}
 		clusters.push(row);
 	}	
@@ -384,15 +392,15 @@ class Entrance {
 }
 
 class Cluster {
-	constructor(size, i, j, rowStart, colStart) {
+	constructor(rowSize, colSize, i, j, rowStart, colStart) {
 		//index in the clusters array
 		this.index = {row: i, col: j};
-		//side lengths of cluster square
-		this.size = size;
+		this.rowSize = rowSize;
+		this.colSize = colSize;
 		this.left = colStart;
-		this.right = colStart + size - 1;
+		this.right = colStart + colSize - 1;
 		this.top = rowStart;
-		this.bottom = rowStart + size - 1;
+		this.bottom = rowStart + rowSize - 1;
 	}
 }
 

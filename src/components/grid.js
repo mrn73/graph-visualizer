@@ -100,6 +100,8 @@ function Grid(props) {
 	}	
 
 	const cols = props.grid[0].length;
+	const rows = props.grid.length;
+	console.log(props.rowBorderInterval);
 
 	return (
 		<div className={"grid"} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}
@@ -107,6 +109,7 @@ function Grid(props) {
 			{props.grid.map((row, i) => 
 				row.map((_, j) => { 
 					let type;
+					let extra = "";
 					if (props.start && i == props.start.i && j == props.start.j) {
 						type = NodeType.SRC;
 					} else if (props.end && i == props.end.i && j == props.end.j) {
@@ -114,10 +117,16 @@ function Grid(props) {
 					} else {
 						type = props.grid[i][j];
 					}
+					if (props.rowBorderInterval && (i + 1) % props.rowBorderInterval == 0) {
+						extra += " bottom-border";
+					}
+					if (props.colBorderInterval && (j + 1) % props.colBorderInterval == 0) {
+						extra += " right-border";
+					}
 					return (
 						<MemoCell 
 							key={"row" + i + "col" + j} 
-							value={{row: i, col: j, type}} 
+							value={{row: i, col: j, type, extra}} 
 							handleAction={updateCell}/>
 					);
 				})
@@ -127,7 +136,9 @@ function Grid(props) {
 }
 
 function isEqual(prev, next) {
-	return prev.value.type == next.value.type && prev.handleAction === next.handleAction;
+	return prev.value.type == next.value.type 
+		&& prev.handleAction === next.handleAction
+		&& prev.value.extra == next.value.extra;
 }
 const MemoCell = React.memo(Cell, isEqual);
 
@@ -143,7 +154,7 @@ function Cell(props) {
 
 	return (
 		<button 
-			className={"cell type" + props.value.type}
+			className={"cell type" + props.value.type + props.value.extra}
 			onMouseDown={handleMouseEvent}
 			onMouseEnter={handleMouseEvent}
 			onMouseUp={handleMouseEvent}

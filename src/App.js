@@ -435,6 +435,8 @@ function App() {
 					grid={gridState.nodes} 
 					start={coords(gridState.src, gridState.cols)}
 					end={coords(gridState.dst, gridState.cols)}
+					rowBorderInterval={search == "HPA" ? 5 : null}
+					colBorderInterval={search == "HPA" ? 5 : null}
 					dispatch={dispatch}
 				/>
 			</div>
