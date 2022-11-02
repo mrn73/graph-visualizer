@@ -7,84 +7,65 @@ function hpaStar(G, s, d, cSize=5) {
 	const absGraph = new AbstractGraph(G, cSize);
 	const rows = G.length;
 	const cols = G[0].length;
-	let sNode = new Node(Math.floor(s / cols), s % cols);
-	let dNode = new Node(Math.floor(d / cols), d % cols);
 
-	sNode = absGraph.insertNode(sNode);
-	dNode = absGraph.insertNode(dNode);
+	function run() {
+		let sNode = new Node(Math.floor(s / cols), s % cols);
+		let dNode = new Node(Math.floor(d / cols), d % cols);
 
-	if (!sNode || !dNode) {
-		console.log("source or destination cluster is blocked");
-		return {path: [], visited: []};
-	}
-	const absPath = search(sNode, dNode);
-	//console.log(absPath);
-	const realPath = refinePath(G, absGraph, absPath.path);
-	//console.log(realPath);
-	return {path: realPath.path, visited: realPath.visited};
-}
+		sNode = absGraph.insertNode(sNode);
+		dNode = absGraph.insertNode(dNode);
 
-/**
- * Takes a path found on the abstract graph and turns it into a path on the original grid.
- */
-function refinePath(G, absGraph, absPath) {
-	const path = [];
-	const visited = [];
-	for (let i = 1; i < absPath.length; i++) {
-		const c1 = absGraph.getCluster(absPath[i - 1]);
-		const c2 = absGraph.getCluster(absPath[i]);
-		const s1 = globalToLocal(absPath[i - 1], c1);
-		const d1 = globalToLocal(absPath[i], c1);
-		if (c1 === c2) {
-			// graph of the cluster
-			const g = graphFromCluster(G, c1);
-			// do A* on the cluster to get a path of node indices (relative to top-left of g)
-			const cPath = aStar(g, abs(g, s1.row, s1.col), abs(g, d1.row, d1.col));
-			// for each node of the path found in the cluster, convert local cluster coords
-			// to global coords.
-			for (const n of cPath.path) {
-				const nCoords = localToGlobal(coords(g, n), c1);
-				path.push(abs(G, nCoords.row, nCoords.col));
-			}
-			const cVisited = [];
-			for (const n of cPath.visited) {
-				const nCoords = localToGlobal(coords(g, n), c1);
-				//cVisited.push(abs(G, nCoords.row, nCoords.col));
-				visited.push(abs(G, nCoords.row, nCoords.col));
-			}
-			//visited.push(cVisited);
+		if (!sNode || !dNode) {
+			console.log("source or destination cluster is blocked");
+			return {path: [], visited: []};
 		}
+		const absPath = search(sNode, dNode);
+		//console.log(absPath);
+		const realPath = refinePath(G, absGraph, absPath.path);
+		//console.log(realPath);
+		return {path: realPath.path, visited: realPath.visited};
 	}
-	return {path, visited};
+	return {absGraph, run};
 }
 
-function graphFromCluster(G, c) {
-	return G.slice(c.top, c.bottom + 1).map(row => row.slice(c.left, c.right + 1));
+class Entrance {
+	/**
+	 * @param {Cluster} c1 - first cluster
+	 * @param {Cluster} c2 - second cluster
+	 * @param {number} start - the start pos of the edge (inclusive)
+	 * @param {number} end - the end pos of the edge (not inclusive)
+	 */
+	constructor(c1, c2, start, end) {
+		this.c1 = c1;
+		this.c2 = c2;
+		this.start = start;
+		this.end = end;
+	}
 }
 
-/**
- * Maps a node from a local graph within a cluster into the global graph.
- * @param {Node} v - The node to be mapped from global to local space
- * @param {Cluster} c - The cluster that is considered local space.
- * @return {{row: {number}, col: {number}}}
- */
-function localToGlobal(v, c) {
-	const row = v.row + c.top;
-	const col = v.col + c.left;
-	return {row, col};
+class Cluster {
+	constructor(rowSize, colSize, i, j, rowStart, colStart) {
+		//index in the clusters array
+		this.index = {row: i, col: j};
+		this.rowSize = rowSize;
+		this.colSize = colSize;
+		this.left = colStart;
+		this.right = colStart + colSize - 1;
+		this.top = rowStart;
+		this.bottom = rowStart + rowSize - 1;
+	}
 }
 
-/**
- * Maps a node from the original graph into a graph of the cluster, with (0, 0) 
- * being relative to the top left of the cluster.
- * @param {Node} v - The node to be mapped from global to local space
- * @param {Cluster} c - The cluster that is considered local space.
- * @return {{row: {number}, col: {number}}}
- */
-function globalToLocal(v, c) {
-	const row = v.row - c.top;
-	const col = v.col - c.left;
-	return {row, col};
+class Node {
+	constructor(row, col) {
+		this.row = row;
+		this.col = col;
+		this.neighbors = [];
+	}
+
+	addNeighbor(n, w) {
+		this.neighbors.push({n, w});
+	}
 }
 
 class AbstractGraph {
@@ -138,115 +119,10 @@ class AbstractGraph {
 		const col = Math.floor(n.col / this.cSize);
 		return this.clusters[row][col];
 	}
-}
 
-function buildGraph(G, clusters, entrances) {
-	// build the INTER edges (edges between clusters)
-	// map of cluster -> nodes
-	const graph = new Map();
-	for (const e of entrances) {
-		// create 2 nodes: one each side of entrance
-		const [n1, n2] = createNodes(e);
-
-		// connect the two nodes
-		connect(n1, n2, 1);
-
-		// add the nodes to the graph, listed under their respective cluster.
-		if (!graph.has(e.c1)) {
-			graph.set(e.c1, [n1]);
-		} else {
-			graph.get(e.c1).push(n1);
-		}
-		if (!graph.has(e.c2)) {
-			graph.set(e.c2, [n2]);
-		} else {
-			graph.get(e.c2).push(n2);
-		}	
+	getNodes() {
+		return Array.from(this.graph.values()).flat();
 	}
-
-	// build the INTRA edges (edges within a cluster)
-	for (const row of clusters) {
-		for (const c of row) {
-			const nodes = graph.get(c);
-
-			// in case an entire cluster was blocked and therefore not in the graph
-			if (nodes == undefined) { 
-				continue;
-			}
-			// iterate over all possible pairs and find shortest distances between them
-			for (let i = 0; i < nodes.length - 1; i++) {
-				for (let j = i + 1; j < nodes.length; j++) {
-					const d = distance(G, c, nodes[i], nodes[j]);
-					if (d > 0) {
-						connect(nodes[i], nodes[j], d);
-					}
-				}
-			}
-		}
-	}
-	return graph;
-	//console.log(graph);
-}
-
-function distance(G, c, n1, n2) {
-	const cGraph = makeClusterGraph(G, c);
-	const s = (n1.row - c.top) * cGraph.cols + (n1.col - c.left);
-	const d = (n2.row - c.top) * cGraph.cols + (n2.col - c.left);
-	const result = aStar(cGraph.nodes, s, d); 
-	//console.log(n1.row + ", " + n1.col + " --> " + n2.row + ", " + n2.col + " : " + result.path.length);
-
-	return result.pathWeight;
-}
-
-function makeClusterGraph(G, c) {
-	const cGraph = G.slice(c.top, c.bottom + 1).map((row) =>
-		row.slice(c.left, c.right + 1)
-	);
-	return {nodes: cGraph, rows: cGraph.length, cols: cGraph[0].length};
-}
-
-function connect(n1, n2, w) {
-	n1.addNeighbor(n2, w);
-	n2.addNeighbor(n1, w);
-}
-
-/**
- * Takes an entrance and adds 2 nodes on either side, bridging two clusters
- */
-function createNodes(e) {
-	//dx respective to c1
-	const dx = e.c1.index.col - e.c2.index.col;
-	//dy respective to c1
-	const dy = e.c1.index.row - e.c2.index.row;
-	let row1, col1;
-	let row2, col2;
-	
-	if (dy == 1) {
-		//up
-		row1 = e.c1.top;
-		col1 = e.start + Math.floor((e.end - e.start) / 2);
-		row2 = e.c2.bottom;
-		col2 = e.start + Math.floor((e.end - e.start) / 2);
-	} else if (dy == -1) {
-		//down
-		row1 = e.c1.bottom;
-		col1 = e.start + Math.floor((e.end - e.start) / 2);
-		row2 = e.c2.top;
-		col2 = e.start + Math.floor((e.end - e.start) / 2);
-	} else if (dx == 1) {
-		//left
-		row1 = e.start + Math.floor((e.end - e.start) / 2);
-		col1 = e.c1.left;
-		row2 = e.start + Math.floor((e.end - e.start) / 2);
-		col2 = e.c2.right;
-	} else if (dx == -1) {
-		//right
-		row1 = e.start + Math.floor((e.end - e.start) / 2);
-		col1 = e.c1.right;
-		row2 = e.start + Math.floor((e.end - e.start) / 2);
-		col2 = e.c2.left;
-	}	
-	return [new Node(row1, col1), new Node(row2, col2)];
 }
 
 function buildClusters(G, cSize) {
@@ -351,6 +227,199 @@ function doBuildEntrance(G, E, c1, c2) {
 	}	
 }
 
+function buildGraph(G, clusters, entrances) {
+	// build the INTER edges (edges between clusters)
+	// map of cluster -> nodes
+	const graph = new Map();
+	for (const e of entrances) {
+		// create 2 nodes: one each side of entrance
+		const [n1, n2] = createNodes(e);
+
+		// add the nodes to the graph, listed under their respective cluster.
+		let end1 = n1;
+		if (!graph.has(e.c1)) {
+			graph.set(e.c1, [n1]);
+		} else {
+			for (const n of graph.get(e.c1)) {
+				if (n.row == n1.row && n.col == n1.col) {
+					end1 = n;
+					break;
+				}
+			}
+			if (end1 === n1) {
+				graph.get(e.c1).push(n1);
+			}
+		}
+		let end2 = n2;
+		if (!graph.has(e.c2)) {
+			graph.set(e.c2, [n2]);
+		} else {
+			for (const n of graph.get(e.c2)) {
+				if (n.row == n2.row && n.col == n2.col) {
+					end2 = n;
+					break;
+				}
+			}
+			if (end2 === n2) {
+				graph.get(e.c2).push(n2);
+			}
+		}	
+
+		connect(end1, end2, 1);
+	}
+
+	// build the INTRA edges (edges within a cluster)
+	for (const row of clusters) {
+		for (const c of row) {
+			const nodes = graph.get(c);
+
+			// in case an entire cluster was blocked and therefore not in the graph
+			if (nodes == undefined) { 
+				continue;
+			}
+			// iterate over all possible pairs and find shortest distances between them
+			for (let i = 0; i < nodes.length - 1; i++) {
+				for (let j = i + 1; j < nodes.length; j++) {
+					const d = distance(G, c, nodes[i], nodes[j]);
+					if (d > 0) {
+						connect(nodes[i], nodes[j], d);
+					}
+				}
+			}
+		}
+	}
+	return graph;
+	//console.log(graph);
+}
+
+/**
+ * Takes an entrance and adds 2 nodes on either side, bridging two clusters
+ */
+function createNodes(e) {
+	//dx respective to c1
+	const dx = e.c1.index.col - e.c2.index.col;
+	//dy respective to c1
+	const dy = e.c1.index.row - e.c2.index.row;
+	let row1, col1;
+	let row2, col2;
+	
+	if (dy == 1) {
+		//up
+		row1 = e.c1.top;
+		col1 = e.start + Math.floor((e.end - e.start) / 2);
+		row2 = e.c2.bottom;
+		col2 = e.start + Math.floor((e.end - e.start) / 2);
+	} else if (dy == -1) {
+		//down
+		row1 = e.c1.bottom;
+		col1 = e.start + Math.floor((e.end - e.start) / 2);
+		row2 = e.c2.top;
+		col2 = e.start + Math.floor((e.end - e.start) / 2);
+	} else if (dx == 1) {
+		//left
+		row1 = e.start + Math.floor((e.end - e.start) / 2);
+		col1 = e.c1.left;
+		row2 = e.start + Math.floor((e.end - e.start) / 2);
+		col2 = e.c2.right;
+	} else if (dx == -1) {
+		//right
+		row1 = e.start + Math.floor((e.end - e.start) / 2);
+		col1 = e.c1.right;
+		row2 = e.start + Math.floor((e.end - e.start) / 2);
+		col2 = e.c2.left;
+	}	
+	return [new Node(row1, col1), new Node(row2, col2)];
+}
+
+/**
+ * Takes a path found on the abstract graph and turns it into a path on the original grid.
+ */
+function refinePath(G, absGraph, absPath) {
+	const path = [];
+	const visited = [];
+	for (let i = 1; i < absPath.length; i++) {
+		const c1 = absGraph.getCluster(absPath[i - 1]);
+		const c2 = absGraph.getCluster(absPath[i]);
+		const s1 = globalToLocal(absPath[i - 1], c1);
+		const d1 = globalToLocal(absPath[i], c1);
+		if (c1 === c2) {
+			// graph of the cluster
+			const g = graphFromCluster(G, c1);
+			// do A* on the cluster to get a path of node indices (relative to top-left of g)
+			const cPath = aStar(g, abs(g, s1.row, s1.col), abs(g, d1.row, d1.col));
+			// for each node of the path found in the cluster, convert local cluster coords
+			// to global coords.
+			for (const n of cPath.path) {
+				const nCoords = localToGlobal(coords(g, n), c1);
+				path.push(abs(G, nCoords.row, nCoords.col));
+			}
+			const cVisited = [];
+			for (const n of cPath.visited) {
+				const nCoords = localToGlobal(coords(g, n), c1);
+				//cVisited.push(abs(G, nCoords.row, nCoords.col));
+				visited.push(abs(G, nCoords.row, nCoords.col));
+			}
+			//visited.push(cVisited);
+		} else {
+			visited.push(abs(G, absPath[i - 1].row, absPath[i - 1].col));
+			path.push(abs(G, absPath[i - 1].row, absPath[i - 1].col));
+			path.push(abs(G, absPath[i].row, absPath[i].col));
+		}
+	}
+	return {path: [...new Set(path)], visited};
+}
+
+function graphFromCluster(G, c) {
+	return G.slice(c.top, c.bottom + 1).map(row => row.slice(c.left, c.right + 1));
+}
+
+/**
+ * Maps a node from a local graph within a cluster into the global graph.
+ * @param {Node} v - The node to be mapped from global to local space
+ * @param {Cluster} c - The cluster that is considered local space.
+ * @return {{row: {number}, col: {number}}}
+ */
+function localToGlobal(v, c) {
+	const row = v.row + c.top;
+	const col = v.col + c.left;
+	return {row, col};
+}
+
+/**
+ * Maps a node from the original graph into a graph of the cluster, with (0, 0) 
+ * being relative to the top left of the cluster.
+ * @param {Node} v - The node to be mapped from global to local space
+ * @param {Cluster} c - The cluster that is considered local space.
+ * @return {{row: {number}, col: {number}}}
+ */
+function globalToLocal(v, c) {
+	const row = v.row - c.top;
+	const col = v.col - c.left;
+	return {row, col};
+}
+
+function distance(G, c, n1, n2) {
+	const cGraph = makeClusterGraph(G, c);
+	const s = (n1.row - c.top) * cGraph.cols + (n1.col - c.left);
+	const d = (n2.row - c.top) * cGraph.cols + (n2.col - c.left);
+	const result = aStar(cGraph.nodes, s, d); 
+	//console.log(n1.row + ", " + n1.col + " --> " + n2.row + ", " + n2.col + " : " + result.path.length);
+
+	return result.pathWeight;
+}
+
+function makeClusterGraph(G, c) {
+	const cGraph = G.slice(c.top, c.bottom + 1).map((row) =>
+		row.slice(c.left, c.right + 1)
+	);
+	return {nodes: cGraph, rows: cGraph.length, cols: cGraph[0].length};
+}
+
+function connect(n1, n2, w) {
+	n1.addNeighbor(n2, w);
+	n2.addNeighbor(n1, w);
+}
+
 function adjacent(clusters, c) {
 	const neighbors = [];
 	//up
@@ -374,46 +443,6 @@ function adjacent(clusters, c) {
 
 function isBlocked(node) {
 	return node === NodeType.BLOCKED;
-}
-
-class Entrance {
-	/**
-	 * @param {Cluster} c1 - first cluster
-	 * @param {Cluster} c2 - second cluster
-	 * @param {number} start - the start pos of the edge (inclusive)
-	 * @param {number} end - the end pos of the edge (not inclusive)
-	 */
-	constructor(c1, c2, start, end) {
-		this.c1 = c1;
-		this.c2 = c2;
-		this.start = start;
-		this.end = end;
-	}
-}
-
-class Cluster {
-	constructor(rowSize, colSize, i, j, rowStart, colStart) {
-		//index in the clusters array
-		this.index = {row: i, col: j};
-		this.rowSize = rowSize;
-		this.colSize = colSize;
-		this.left = colStart;
-		this.right = colStart + colSize - 1;
-		this.top = rowStart;
-		this.bottom = rowStart + rowSize - 1;
-	}
-}
-
-class Node {
-	constructor(row, col) {
-		this.row = row;
-		this.col = col;
-		this.neighbors = [];
-	}
-
-	addNeighbor(n, w) {
-		this.neighbors.push({n, w});
-	}
 }
 
 function search(s, d) {

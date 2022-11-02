@@ -101,7 +101,7 @@ function Grid(props) {
 
 	const cols = props.grid[0].length;
 	const rows = props.grid.length;
-	console.log(props.rowBorderInterval);
+	//console.log(props.rowBorderInterval);
 
 	return (
 		<div className={"grid"} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}
@@ -110,6 +110,7 @@ function Grid(props) {
 				row.map((_, j) => { 
 					let type;
 					let extra = "";
+					let specialCell = false;
 					if (props.start && i == props.start.i && j == props.start.j) {
 						type = NodeType.SRC;
 					} else if (props.end && i == props.end.i && j == props.end.j) {
@@ -123,10 +124,17 @@ function Grid(props) {
 					if (props.colBorderInterval && (j + 1) % props.colBorderInterval == 0) {
 						extra += " right-border";
 					}
+					if (props.specialCells 
+						&& i < props.specialCells.length
+						&& j < props.specialCells[0].length
+						&& props.specialCells[i][j]) {
+						specialCell = true;
+					}
+
 					return (
 						<MemoCell 
 							key={"row" + i + "col" + j} 
-							value={{row: i, col: j, type, extra}} 
+							value={{row: i, col: j, type, extra, specialCell}} 
 							handleAction={updateCell}/>
 					);
 				})
@@ -138,7 +146,8 @@ function Grid(props) {
 function isEqual(prev, next) {
 	return prev.value.type == next.value.type 
 		&& prev.handleAction === next.handleAction
-		&& prev.value.extra == next.value.extra;
+		&& prev.value.extra == next.value.extra
+		&& prev.value.specialCell == next.value.specialCell;
 }
 const MemoCell = React.memo(Cell, isEqual);
 
@@ -153,12 +162,19 @@ function Cell(props) {
 	}	
 
 	return (
-		<button 
+		<button style={{padding: 0}} 
 			className={"cell type" + props.value.type + props.value.extra}
 			onMouseDown={handleMouseEvent}
 			onMouseEnter={handleMouseEvent}
 			onMouseUp={handleMouseEvent}
 			onContextMenu={handleContext}>
+			{props.value.specialCell ?
+				<svg style={{opacity: "1"}} height="100%" width="100%">
+					<circle cx="50%" cy="50%" r="5" fill="#745da2" />
+				</svg>
+				: 
+				null
+			}
 		</button>
 	);
 }

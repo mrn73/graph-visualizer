@@ -96,7 +96,7 @@ function gridReducer(state, action) {
 						...state.nodes[action.payload.row].slice(action.payload.col + 1)
 					],
 					...state.nodes.slice(action.payload.row + 1)
-				]
+				],
 			};
 		case 'setSrc':
 			const newSrc = action.payload.row * state.cols + action.payload.col; 
@@ -184,6 +184,7 @@ function gridReducer(state, action) {
 function App() {	
 	const [gridState, dispatch] = useReducer(gridReducer, {rows, cols}, initGrid);
 	const [search, setSearch] = useState("none");
+	const [hpa, setHpa] = useState(null);
 	const timeoutInfo = useRef({timeouts: new Map(), longest: 0});
 	const nodeWeight = useRef(getDefaultWeights());
 	const searchState = useRef({isSearching: false, animate: true});
@@ -206,6 +207,19 @@ function App() {
 				break;
 		}
 	}
+	
+	useEffect(() => {
+		if (search == "HPA") {
+			const hpa = hpaStar(gridState.nodes, gridState.src, gridState.dst, 5);
+			const entrances = Array(gridState.rows).fill().map(() => new Array(gridState.cols).fill(null));
+			for (const n of hpa.absGraph.getNodes()) {
+				entrances[n.row][n.col] = 'ENTRANCE';
+			}
+			setHpa({hpaObject: hpa, entrances});
+		} else if (search != "HPA") {
+			setHpa(null);
+		}
+	}, [search, gridState]);
 
 
 	/**
@@ -294,7 +308,7 @@ function App() {
 				break;
 			case "HPA":
 				console.time('hpa');
-				result = hpaStar(gridState.nodes, gridState.src, gridState.dst, 5);
+				result = hpa.hpaObject.run();
 				console.timeEnd('hpa');
 				visualizeNormal(result.visited, result.path, animate);
 				break;
@@ -324,7 +338,7 @@ function App() {
 	const visualizeBidirectional = (visitedSrc, visitedDst, path, animate=true) => {
 		draw({type: NodeType.VISITED, list: visitedSrc}, 0, animate);
 		draw({type: NodeType.VISITED, list: visitedDst}, 0, animate);
-		drawAfter({type: NodeType.PATh, list: path}, 1000, animate);
+		drawAfter({type: NodeType.PATH, list: path}, 1000, animate);
 	}
 	
 	/**
@@ -437,6 +451,7 @@ function App() {
 					end={coords(gridState.dst, gridState.cols)}
 					rowBorderInterval={search == "HPA" ? 5 : null}
 					colBorderInterval={search == "HPA" ? 5 : null}
+					specialCells={hpa ? hpa.entrances : null}
 					dispatch={dispatch}
 				/>
 			</div>
