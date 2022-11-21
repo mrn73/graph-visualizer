@@ -478,8 +478,11 @@ function App() {
 					<button onClick={() => setSearch("JPS")}>Jump Point Search</button>
 				</DropDown>
 				<DropDown title={"Grid"}>	
-					<button onClick={() => setGrid("randomize")}>Randomize</button>
+					<p><b>New</b></p>
+					<hr/>
+					<button onClick={() => setGrid("randomize")}>Random Grid</button>
 					<button onClick={() => setGrid("simplex")}>Simplex World</button>
+					<p><b>Edit</b></p>
 					<hr/>
 					<button onClick={() => clearSearch(true, true)}>Clear Search</button>
 					<button onClick={() => clearSearch(true, false)}>Clear Visited</button>
