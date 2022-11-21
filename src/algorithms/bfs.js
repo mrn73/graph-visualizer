@@ -5,7 +5,7 @@ import { isBlocked, neighbors } from './4-neighbor-graph-helper.js';
  * @param {Array<Array<number>>} G - The array of nodes in the graph.
  * @param {number} s - The index of the starting node in the graph.
  * @param {number} d - The index of the destination in the graph.
- * @return {{path: Array<number>, visited: Array<number> }}
+ * @return {{path: Array<number>, visited: Array<number>, ops: number}}
  */
 function bfs(G, s, d) {
 	const fringe = new Queue();		
@@ -14,9 +14,11 @@ function bfs(G, s, d) {
 	fringe.enqueue(s);
 	visited.set(s, null);
 
+	let ops = 0;
 	let v;
 	while (!fringe.isEmpty()) {
 		v = fringe.dequeue();
+		ops++;
 		if (v === d) {
 			break;
 		}
@@ -26,6 +28,7 @@ function bfs(G, s, d) {
 			if (!visited.has(w) && !isBlocked(G, w)) {
 				fringe.enqueue(w);
 				visited.set(w, v);
+				ops++;
 			}
 		}
 	}		
@@ -39,7 +42,7 @@ function bfs(G, s, d) {
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()]};
+	return {path: path.reverse(), visited: [...visited.keys()], ops};
 } 
 
 export default bfs;

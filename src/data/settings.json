@@ -1,0 +1,104 @@
+{
+	"animate": {
+		"name": "Animate",
+		"value": true,
+		"default": true
+	},
+	"animationSpeed": {
+		"name": "Animation Speed Multiplier",
+		"value": 1,
+		"default": 1,
+		"maxVal": 5,
+		"minVal": 0.1,
+		"increment": 0.1
+	},
+	"blockedPercent": {
+		"name": "Blocked Percent",
+		"value": 0.1,
+		"default": 0.1,
+		"maxVal": 1,
+		"minVal": 0,
+		"increment": 0.1
+	},
+	"hpaClusterSize": {
+		"name": "HPA Cluster Size",
+		"value": 5,
+		"default": 5,
+		"maxVal": 20,
+		"minVal": 3,
+		"increment": 1
+	},
+	"hpaShowEntrances": {
+		"name": "HPA Show Entrances",
+		"value": true,
+		"default": true
+	},
+	"weightNormal": {
+		"name": "Normal",
+		"value": 1,
+		"default": 1,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	},
+	"weightDeepWater": {
+		"name": "Deep Water",
+		"value": 100,
+		"default": 100,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	},
+	"weightWater": {
+		"name": "Water",
+		"value": 25,
+		"default": 25,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	},
+	"weightSand": {
+		"name": "Sand",
+		"value": 8,
+		"default": 8,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	},
+	"weightForest": {
+		"name": "Forest",
+		"value": 10,
+		"default": 10,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	},
+	"weightGrassland": {
+		"name": "Grassland",
+		"value": 5,
+		"default": 5,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	},
+	"weightRock": {
+		"name": "Rock",
+		"value": 15,
+		"default": 15,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	},
+	"weightSnow": {
+		"name": "Snow",
+		"value": 30,
+		"default": 30,
+		"maxVal": 999,
+		"minVal": 1,
+		"increment": 1
+	}
+}
+
+
+		
+

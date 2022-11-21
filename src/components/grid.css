@@ -5,6 +5,7 @@
 	border: 1px solid gray;
 	margin-right: -1px;
 	margin-bottom: -1px;
+	transition: margin .5s ease-in;
 }
 
 .cell:hover {

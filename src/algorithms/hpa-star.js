@@ -3,11 +3,46 @@ import aStar from './a-star.js';
 import PriorityQueue from '../data-structures/priority-queue.js';
 import { coords, abs } from './4-neighbor-graph-helper.js';
 
+/**
+ * Hierarchical Pathfinding A* created by Adi Botea et al.
+ * The goal is to abstract a grid into smaller clusters (mini grids)
+ * that speeds up computation by up to 10x while keeping the paths 99%
+ * optimal. 
+ *
+ * More info:
+ * https://webdocs.cs.ualberta.ca/~mmueller/ps/hpastar.pdf
+ *
+ * This function creates an HPA object that consists of the abstract
+ * graph, size of the grid, and a run function. The abstract graph stores the clusters
+ * created out of the original grid as well as the entrances and nodes.
+ * Calling run will perform HPA* search on the saved abstract graph and translate
+ * that path onto the real grid.
+ *
+ * TODO: As of now, any edit to the initial grid through user interaction requires 
+ * 	 a new HPA object (due to a new abstraction). Optimally, the HPA object should
+ * 	 be able to access the cluster that has been altered and rebuild only the entrances
+ * 	 between its surrounding clusters, lessening the time it takes for setup.
+ *
+ * @param {Array<Array<number>>} G - The array of nodes in the graph.
+ * @param {number} s - The index of the starting node in the graph.
+ * @param {number} d - The index of the destination in the graph.
+ * @param {number} cSize - The size of a cluster square.
+ * @return {{absGraph: AbstractGraph, run: Function}}
+ * @return {{path: Array<number>, visited: Array<number>, absPathOps: number, realPathOps: number, ops: number}}
+ */
 function hpaStar(G, s, d, cSize=5) {
 	const absGraph = new AbstractGraph(G, cSize);
 	const rows = G.length;
 	const cols = G[0].length;
-
+	
+	/**
+	 * Runs HPA search on the saved graph.
+	 * @return {{path: Array<number>,
+	 * 	     visited: Array<number>,
+	 * 	     absPathOps: number,
+	 * 	     realPathOps: number
+	 * 	   }}
+	 */
 	function run() {
 		let sNode = new Node(Math.floor(s / cols), s % cols);
 		let dNode = new Node(Math.floor(d / cols), d % cols);
@@ -23,7 +58,12 @@ function hpaStar(G, s, d, cSize=5) {
 		//console.log(absPath);
 		const realPath = refinePath(G, absGraph, absPath.path);
 		//console.log(realPath);
-		return {path: realPath.path, visited: realPath.visited};
+		return {path: realPath.path, 
+			visited: realPath.visited, 
+			absPathOps: absPath.ops,
+			realPathOps: realPath.ops,
+			ops: absPath.ops + realPath.ops
+		};
 	}
 	return {absGraph, run};
 }
@@ -337,6 +377,7 @@ function createNodes(e) {
 function refinePath(G, absGraph, absPath) {
 	const path = [];
 	const visited = [];
+	let ops = 0;
 	for (let i = 1; i < absPath.length; i++) {
 		const c1 = absGraph.getCluster(absPath[i - 1]);
 		const c2 = absGraph.getCluster(absPath[i]);
@@ -359,6 +400,7 @@ function refinePath(G, absGraph, absPath) {
 				//cVisited.push(abs(G, nCoords.row, nCoords.col));
 				visited.push(abs(G, nCoords.row, nCoords.col));
 			}
+			ops += cPath.ops;
 			//visited.push(cVisited);
 		} else {
 			visited.push(abs(G, absPath[i - 1].row, absPath[i - 1].col));
@@ -366,7 +408,7 @@ function refinePath(G, absGraph, absPath) {
 			path.push(abs(G, absPath[i].row, absPath[i].col));
 		}
 	}
-	return {path: [...new Set(path)], visited};
+	return {path: [...new Set(path)], visited, ops};
 }
 
 function graphFromCluster(G, c) {
@@ -452,10 +494,12 @@ function search(s, d) {
 
 	fringe.push(s, h(s, d));
 	visited.set(s, {par: null, g: 0, h: h(s, d), f: h(s, d)});
-	
+
+	let ops = 0;	
 	let v;
 	while (!fringe.isEmpty()) {
 		v = fringe.pop();
+		ops++;
 		if (v === d) {
 			break;
 		}
@@ -484,6 +528,7 @@ function search(s, d) {
 				const fVal = cost + hVal;
 				visited.set(w, {par: v, g: cost, h: hVal, f: fVal});	
 				fringe.push(w, fVal); 
+				ops++;
 			}
 
 		}
@@ -498,7 +543,7 @@ function search(s, d) {
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()]};	
+	return {path: path.reverse(), visited: [...visited.keys()], ops};	
 }
 
 function h(v1, v2) {	

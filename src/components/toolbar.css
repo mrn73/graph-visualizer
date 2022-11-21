@@ -26,6 +26,10 @@ ul > li > button, a, .dropdown-header {
 	margin-bottom: 5px;
 }
 
+ul > li:last-child{
+	float: right;
+}
+
 ul > li > button:hover, a:hover, .dropdown-header:hover {
 	cursor: pointer;
 	color: gray;

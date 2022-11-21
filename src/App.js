@@ -3,13 +3,11 @@ import './App.css';
 import Grid from './components/grid.js';
 import Toolbar from './components/toolbar.js';
 import DropDown from './components/dropdown.js';
-import FloatingButton from './components/floating-button.js';
 import KeyBar from './components/key-bar.js';
 import FlexBox from './components/flex-box.js';
-import { NodeType, getDefaultWeights } from './node.js';
+import { NodeType } from './node.js';
 import bfs from './algorithms/bfs.js';
 import dfs from './algorithms/dfs.js';
-import iddfs from './algorithms/iterative-deepening.js';
 import bidirectionalSearch from './algorithms/bidirectional-bfs.js';
 import gbfs from './algorithms/greedy-best-first.js';
 import aStar from './algorithms/a-star.js';
@@ -18,11 +16,12 @@ import jps from './algorithms/jps.js';
 import ucs from './algorithms/uniform-cost-search.js';
 import SearchData from './data/searchesInfo.json';
 import { generateWorld } from './algorithms/gen-world.js';
+import SettingsMenu from './components/settings-menu.js';
+import settingsData from './data/settings.json';
 
 const cellSize = 25;
 const rows = Math.floor(window.innerHeight / cellSize); //25
 const cols = Math.floor(window.innerWidth / cellSize); //60 
-const delayInc = 5;
 
 function coords(index, cols) {
 	return {i: Math.floor(index / cols), j: index % cols}; 
@@ -74,7 +73,20 @@ function randomizeGrid(dim, blockedThresh=.1, grid=null) {
 			numBlocked++;
 		}
 	}
+	const srcCoords = coords(newGrid.src, dim.cols);
+	newGrid.nodes[srcCoords.i][srcCoords.j] = NodeType.NORMAL;
+	const dstCoords = coords(newGrid.dst, dim.cols);
+	newGrid.nodes[dstCoords.i][dstCoords.j] = NodeType.NORMAL;
+
 	return newGrid;
+}
+
+function setDefaultSettings() {
+	const settings = new Map();
+	for (const setting in settingsData) {
+		settings.set(setting, settingsData[setting]);
+	}
+	return settings;
 }
 
 /*
@@ -83,7 +95,6 @@ function randomizeGrid(dim, blockedThresh=.1, grid=null) {
  * 	  and plug it in outside of the switch statement for resuse)
  */
 function gridReducer(state, action) {
-	let row, col;
 	switch (action.type) {
 		case 'setNode':
 			return {
@@ -184,11 +195,30 @@ function gridReducer(state, action) {
 function App() {	
 	const [gridState, dispatch] = useReducer(gridReducer, {rows, cols}, initGrid);
 	const [search, setSearch] = useState("none");
+	const [prevSearchInfo, setPrevSearchInfo] = useState(null);
 	const [hpa, setHpa] = useState(null);
 	const timeoutInfo = useRef({timeouts: new Map(), longest: 0});
-	const nodeWeight = useRef(getDefaultWeights());
 	const searchState = useRef({isSearching: false, animate: true});
 	const container = useRef(null);
+	const [settings, setSettings] = useState(() => setDefaultSettings());
+	const [showSettings, setShowSettings] = useState(false);
+
+	useEffect(() => {
+		const weights = {};
+		weights[NodeType.NORMAL] = settings.get("weightNormal").value;
+		weights[NodeType.DEEPWATER] = settings.get("weightDeepWater").value;
+		weights[NodeType.WATER] = settings.get("weightWater").value;
+		weights[NodeType.SAND] = settings.get("weightSand").value;
+		weights[NodeType.FOREST] = settings.get("weightForest").value;
+		weights[NodeType.GRASSLAND] = settings.get("weightGrassland").value;
+		weights[NodeType.ROCK] = settings.get("weightRock").value;
+		weights[NodeType.SNOW] = settings.get("weightSnow").value;
+		window.nodeWeights = weights;
+	}, [settings]);
+
+	const changeSettings = (settings) => {
+		setSettings(settings);
+	}
 
 	const updateGridCell = (i, j, type) => {
 		dispatch({type: 'setNode', payload: {row: i, col: j, nodeType: type}});	
@@ -200,7 +230,7 @@ function App() {
 				dispatch({type: "empty"});
 				break;
 			case "randomize":
-				dispatch({type: "randomize", payload: .1});
+				dispatch({type: "randomize", payload: settings.get("blockedPercent").value});
 				break;
 			case "simplex":
 				dispatch({type: "simplex"});
@@ -209,17 +239,20 @@ function App() {
 	}
 	
 	useEffect(() => {
-		if (search == "HPA") {
-			const hpa = hpaStar(gridState.nodes, gridState.src, gridState.dst, 5);
+		if (search === "HPA") {
+			const hpa = hpaStar(gridState.nodes, 
+					gridState.src, 
+					gridState.dst, 
+					settings.get("hpaClusterSize").value);
 			const entrances = Array(gridState.rows).fill().map(() => new Array(gridState.cols).fill(null));
 			for (const n of hpa.absGraph.getNodes()) {
 				entrances[n.row][n.col] = 'ENTRANCE';
 			}
 			setHpa({hpaObject: hpa, entrances});
-		} else if (search != "HPA") {
+		} else if (search !== "HPA") {
 			setHpa(null);
 		}
-	}, [search, gridState]);
+	}, [search, gridState, settings]);
 
 
 	/**
@@ -237,8 +270,8 @@ function App() {
 		const newGrid = structuredClone(gridState);
 		newGrid.nodes.flat().forEach((_, index) => {
 			const {i, j} = coords(index, gridState.cols);
-			if ((clearVisited && newGrid.nodes[i][j] == NodeType.VISITED)
-				|| (clearPath && newGrid.nodes[i][j] == NodeType.PATH)) {
+			if ((clearVisited && newGrid.nodes[i][j] === NodeType.VISITED)
+				|| (clearPath && newGrid.nodes[i][j] === NodeType.PATH)) {
 				newGrid.nodes[i][j] = gridState.terrain[i][j];
 			}
 		});	
@@ -255,11 +288,10 @@ function App() {
 	 * Starts the search.
 	 * Clears the previous search which will trigger a rerender, where the search
 	 * will begin on the next render inside the useEffect below.
-	 * @param {boolean} animate - Whether or not we animate the search.
 	 */
-	const startSearch = (animate=true) => {
+	const startSearch = () => {
 		clearSearch(true, true);
-		searchState.current = {isSearching: true, animate};
+		searchState.current = {isSearching: true, animate: settings.get("animate").value};
 	}
 
 	/**
@@ -268,7 +300,7 @@ function App() {
 	 */
 	useEffect(() => {
 		if (searchState.current.isSearching) {
-			console.log(gridState.nodes);
+			//console.log(gridState.nodes);
 			doSearch(searchState.current.animate);
 			searchState.current.isSearching = false;
 		}
@@ -276,6 +308,7 @@ function App() {
 
 	const doSearch = (animate=true) => {
 		let result;
+		const optLen = aStar(gridState.nodes, gridState.src, gridState.dst).path.length;
 		switch (search) {
 			case "BFS":
 				console.time('bfs');
@@ -304,7 +337,6 @@ function App() {
 				result = aStar(gridState.nodes, gridState.src, gridState.dst);
 				console.timeEnd('astar');
 				visualizeNormal(result.visited, result.path, animate);
-				console.log(result.pathWeight);
 				break;
 			case "HPA":
 				console.time('hpa');
@@ -326,7 +358,24 @@ function App() {
 				break;
 
 		}
-		console.log(result.path);
+		if (search == "HPA") {
+			setPrevSearchInfo({
+				Search: search,
+				"Operations (Abstract Graph)": result.absPathOps,
+				"Operations (Real Graph)": result.realPathOps,
+				"Total Operations": result.ops, 
+				Length: result.path.length, 
+				"True shortest length": optLen
+			});
+		} else {
+			setPrevSearchInfo({
+				Search: search,
+				Operations: result.ops, 
+				Length: result.path.length, 
+				"True shortest length": optLen
+			});
+		}
+		//console.log(result.path);
 		//visualize(result.visited, result.path, animate);
 	}
 
@@ -359,6 +408,9 @@ function App() {
 	 * @param {boolean} animate - Draws the elements one after another if true.
 	 */
 	const draw = (elements, delay=0, animate=true) => {
+		const animationSpeed = settings.get("animationSpeed");
+		const scalar = 5; //scales default setting to not be too fast
+		const delayInc = (scalar * animationSpeed.default) / animationSpeed.value;
 		for (const elem of elements.list) {
 			const {i, j} = coords(elem, gridState.cols);
 			if (animate) {
@@ -409,7 +461,7 @@ function App() {
 
 	const searchProps = SearchData[search].properties;
 	return (
-		<div className={"appBody"}> 
+		<div className={"appBody"} style={{position: "relative"}}> 
 			<Toolbar>
 				<DropDown title={"Algorithms"}>
 					<p><b>Uninformed Searches</b></p>
@@ -433,7 +485,8 @@ function App() {
 					<button onClick={() => clearSearch(true, false)}>Clear Visited</button>
 					<button onClick={clearAll}>Clear All</button>
 				</DropDown>
-				<button onClick={startSearch}>{"Run " + search}</button>
+				{search != "none" ? <button onClick={startSearch}>{"Run " + search}</button> : null}
+				<button onClick={() => setShowSettings(prev => !prev)} className={"settings"}></button>
 			</Toolbar>
 			<div className={"header"}>
 				<KeyBar>{Object.values(NodeType)}</KeyBar>
@@ -449,12 +502,30 @@ function App() {
 					grid={gridState.nodes} 
 					start={coords(gridState.src, gridState.cols)}
 					end={coords(gridState.dst, gridState.cols)}
-					rowBorderInterval={search == "HPA" ? 5 : null}
-					colBorderInterval={search == "HPA" ? 5 : null}
-					specialCells={hpa ? hpa.entrances : null}
+					rowBorderInterval={search == "HPA" ? settings.get("hpaClusterSize").value : null}
+					colBorderInterval={search == "HPA" ? settings.get("hpaClusterSize").value : null}
+					specialCells={hpa && settings.get("hpaShowEntrances").value ? hpa.entrances : null}
 					dispatch={dispatch}
 				/>
 			</div>
+			<div className={"results"}>
+				{prevSearchInfo ? 
+					Object.keys(prevSearchInfo).map((key, i) =>
+						<p key={key}>{key + ": " + prevSearchInfo[key]}</p>
+					) 
+					: 
+					null
+				}
+			</div>		
+			{showSettings ? 
+				<SettingsMenu 
+					settings={[...settings.entries()]} 
+					changeSettings={changeSettings} 
+					closeSettings={() => setShowSettings(false)}
+				/> 
+				: 
+				null
+			}
 		</div>
 	);	
 }

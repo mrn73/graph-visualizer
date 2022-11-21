@@ -6,7 +6,7 @@ import PriorityQueue from '../data-structures/priority-queue.js';
  * @param {Array<Array<number>>} G - The array of nodes in the graph.
  * @param {number} s - The index of the starting node in the graph.
  * @param {number} d - The index of the destination in the graph.
- * @return {{path: Array<number>, visited: Array<number> }}
+ * @return {{path: Array<number>, visited: Array<number>, ops: number}}
  */
 function aStar(G, s, d) {
 	const fringe = new PriorityQueue();
@@ -16,9 +16,12 @@ function aStar(G, s, d) {
 	fringe.push(s, h(G, s, d));
 	visited.set(s, {par: null, g: 0, h: h(G, s, d), f: h(G, s, d)});
 	
+	// number of pop/insert operations
+	let ops = 0;
 	let v;
 	while (!fringe.isEmpty()) {
 		v = fringe.pop();
+		ops++;
 		if (v === d) {
 			break;
 		}
@@ -45,6 +48,7 @@ function aStar(G, s, d) {
 				const fVal = cost + hVal;
 				visited.set(w, {par: v, g: cost, h: hVal, f: fVal});	
 				fringe.push(w, fVal); 
+				ops++;
 			}
 
 		}
@@ -61,7 +65,7 @@ function aStar(G, s, d) {
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()], pathWeight};	
+	return {path: path.reverse(), visited: [...visited.keys()], pathWeight, ops};	
 }
 
 export default aStar;

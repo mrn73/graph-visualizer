@@ -18,9 +18,11 @@ function ucs(G, s, d) {
 	fringe.push(s, 0);
 	visited.set(s, {par: null, g: 0});
 	
+	let ops = 0;
 	let v;
 	while (!fringe.isEmpty()) {
 		v = fringe.pop();
+		ops++;
 		if (v === d) {
 			break;
 		}
@@ -45,6 +47,7 @@ function ucs(G, s, d) {
 			if (!visited.has(w) || cost < visited.get(w).g) {
 				visited.set(w, {par: v, g: cost});
 				fringe.push(w, cost); 
+				ops++;
 			}
 
 		}
@@ -59,7 +62,7 @@ function ucs(G, s, d) {
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()]};	
+	return {path: path.reverse(), visited: [...visited.keys()], ops};	
 }
 
 export default ucs;

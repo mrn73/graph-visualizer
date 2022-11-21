@@ -111,7 +111,7 @@ export function h(G, s, d) {
  * TODO: can add other weights in the future
  */
 export function c(G, v1, v2) {
-	const weights = getDefaultWeights();
+	const weights = window.nodeWeights;
 	const loc = coords(G, v2);
 	//console.log(G[loc.row][loc.col]);
 	//console.log(weights[G[loc.row][loc.col]]);

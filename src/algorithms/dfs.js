@@ -6,7 +6,7 @@ import { isBlocked, neighbors } from './4-neighbor-graph-helper.js';
  * @param {number} s - The index of the source node.
  * @param {number} d - The index of the destination node.
  * @param {boolean} [recursive=true] - If true, use the recursive algorithm.
- * @return {{path: Array<number>, visited: Array<number>}}
+ * @return {{path: Array<number>, visited: Array<number>, ops: number}}
  */
 function dfs(G, s, d, recursive=true) {
 	return recursive ? dfsRecursive(G, s, d) : dfsIterative(G, s, d);
@@ -75,7 +75,7 @@ function dfsRecursive(G, s, d) {
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()]};
+	return {path: path.reverse(), visited: [...visited.keys()], ops: visited.size};
 }
 
 /**

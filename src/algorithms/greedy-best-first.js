@@ -1,6 +1,15 @@
 import { isBlocked, neighbors, h } from './4-neighbor-graph-helper.js';
 import PriorityQueue from '../data-structures/priority-queue.js';
 
+/**
+ * Greedy best-first search algorithm. Only takes into account the 
+ * approximated distance to the goal node -- h(n) -- when choosing the next
+ * best node.
+ * @param {Array<Array<number>>} G - The array of nodes in the graph.
+ * @param {number} s - The index of the starting node in the graph.
+ * @param {number} d - The index of the destination in the graph.
+ * @return {{path: Array<number>, visited: Array<number>, ops: number}}
+ */
 function gbfs(G, s, d) {
 	const visited = new Map();
 	const fringe = new PriorityQueue();
@@ -8,9 +17,11 @@ function gbfs(G, s, d) {
 	fringe.push(s, h(G, s, d));
 	visited.set(s, null);
 
+	let ops = 0;
 	let v;
 	while (!fringe.isEmpty()) {
 		v = fringe.pop();
+		ops++;
 		if (v === d) {
 			break;
 		}
@@ -19,6 +30,7 @@ function gbfs(G, s, d) {
 			if (!visited.has(w) && !isBlocked(G, w)) {
 				fringe.push(w, h(G, w, d));
 				visited.set(w, v);
+				ops++;
 			}
 		}
 	}
@@ -32,7 +44,7 @@ function gbfs(G, s, d) {
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()]};
+	return {path: path.reverse(), visited: [...visited.keys()], ops};
 }
 
 export default gbfs;

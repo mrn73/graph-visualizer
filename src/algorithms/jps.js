@@ -37,9 +37,11 @@ function jps(G, s, d) {
 	fringe.push(s, h(G, s, d));
 	visited.set(s, {par: null, g: 0, h: h(G, s, d), f: h(G, s, d)});
 	
+	let ops = 0;
 	let v;
 	while (!fringe.isEmpty()) {
 		v = fringe.pop();
+		ops++;
 		if (v === d) {
 			break;
 		}
@@ -70,6 +72,7 @@ function jps(G, s, d) {
 				const fVal = cost + hVal;
 				visited.set(w, {par: v, g: cost, h: hVal, f: fVal});	
 				fringe.push(w, fVal); 
+				ops++;
 			}
 
 		}
@@ -111,7 +114,7 @@ function jps(G, s, d) {
 		}
 	}
 
-	return {path: path.reverse(), visited: [...visited.keys()]};	
+	return {path: path.reverse(), visited: [...visited.keys()], ops};	
 }
 
 /**

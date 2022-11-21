@@ -9,7 +9,8 @@ import { isBlocked, neighbors } from './4-neighbor-graph-helper.js';
  * @return {{
  * 		path: Array<number>, 
  * 		visited1: Array<number>, 
- * 		visited2: Array<number>
+ * 		visited2: Array<number>,
+ *		ops: number
  * 	   }}
  */
 function bidirectionalSearch(G, s, d) {
@@ -23,10 +24,12 @@ function bidirectionalSearch(G, s, d) {
 	fringe2.enqueue(d);
 	visited2.set(d, null);
 
+	let ops = 0;
 	let v;
 	while (!fringe1.isEmpty() && !fringe2.isEmpty()) {
 		// ----BFS from source----
 		v = fringe1.dequeue();
+		ops++;
 		if (visited2.has(v)) {
 			break;
 		}
@@ -35,11 +38,13 @@ function bidirectionalSearch(G, s, d) {
 			if (!visited1.has(w) && !isBlocked(G, w)) {
 				fringe1.enqueue(w);
 				visited1.set(w, v);
+				ops++;
 			}
 		}
 
 		// ----BFS from destination-----
 		v = fringe2.dequeue();
+		ops++;
 		if (visited1.has(v)) {
 			break;
 		}
@@ -48,6 +53,7 @@ function bidirectionalSearch(G, s, d) {
 			if (!visited2.has(w) && !isBlocked(G, w)) {
 				fringe2.enqueue(w);
 				visited2.set(w, v);
+				ops++;
 			}
 		}
 	}		
@@ -72,7 +78,8 @@ function bidirectionalSearch(G, s, d) {
 	return {
 		path, 
 		visited1: [...visited1.keys()],
-		visited2: [...visited2.keys()]
+		visited2: [...visited2.keys()],
+		ops
 	}
 }
 
