@@ -240,11 +240,12 @@ function App() {
 	
 	useEffect(() => {
 		if (search === "HPA") {
-			const hpa = hpaStar(gridState.nodes, 
-					gridState.src, 
-					gridState.dst, 
+			const grid = getClearedSearch(true, true);
+			const hpa = hpaStar(grid.nodes, 
+					grid.src, 
+					grid.dst, 
 					settings.get("hpaClusterSize").value);
-			const entrances = Array(gridState.rows).fill().map(() => new Array(gridState.cols).fill(null));
+			const entrances = Array(grid.rows).fill().map(() => new Array(grid.cols).fill(null));
 			for (const n of hpa.absGraph.getNodes()) {
 				entrances[n.row][n.col] = 'ENTRANCE';
 			}
@@ -265,8 +266,14 @@ function App() {
 		timeoutInfo.current = {timeouts: new Map(), longest: 0};
 	}
 
-	const clearSearch = (clearVisited, clearPath) => {	
-		cancelSearch();
+	/**
+	 * Makes a copy of the grid's state with the visited and/or path nodes cleared.
+	 * NOTE: DOES NOT visibly show changes (see clearSearch function).
+	 * @param {boolean} clearVisited
+	 * @param {boolean} clearPath
+	 * @return {Object} new grid state.
+	 */
+	const getClearedSearch = (clearVisited, clearPath) => {
 		const newGrid = structuredClone(gridState);
 		newGrid.nodes.flat().forEach((_, index) => {
 			const {i, j} = coords(index, gridState.cols);
@@ -275,9 +282,25 @@ function App() {
 				newGrid.nodes[i][j] = gridState.terrain[i][j];
 			}
 		});	
-		dispatch({type: "setGrid", payload: newGrid});
+		return newGrid;
 	}
 
+	/**
+	 * Cancels any pending draws and clears all existing visited and/or path nodes.
+	 * @param {boolean} clearVisited
+	 * @param {boolean} clearPath
+	 * @return {Object} new grid state.
+	 */
+	const clearSearch = (clearVisited, clearPath) => {	
+		cancelSearch();
+		const newGrid = getClearedSearch(clearVisited, clearPath);
+		dispatch({type: "setGrid", payload: newGrid});
+		return newGrid;
+	}
+
+	/**
+	 * Clears the entire board, leaving only the src and dst nodes.
+	 */
 	const clearAll = () => {
 		dispatch({type: "empty"});
 		cancelSearch();
@@ -290,51 +313,39 @@ function App() {
 	 * will begin on the next render inside the useEffect below.
 	 */
 	const startSearch = () => {
-		clearSearch(true, true);
-		searchState.current = {isSearching: true, animate: settings.get("animate").value};
+		const clearedGrid = clearSearch(true, true);
+		doSearch(settings.get("animate").value, clearedGrid);
 	}
 
-	/**
-	 * Performs the search trigged by startSearch.
-	 * Ensures that the search begins once the grid is cleared of the previous search.
-	 */
-	useEffect(() => {
-		if (searchState.current.isSearching) {
-			//console.log(gridState.nodes);
-			doSearch(searchState.current.animate);
-			searchState.current.isSearching = false;
-		}
-	}, [gridState]);
-
-	const doSearch = (animate=true) => {
+	const doSearch = (animate=true, grid=gridState) => {
 		let result;
-		const optLen = aStar(gridState.nodes, gridState.src, gridState.dst).path.length;
+		const optLen = aStar(grid.nodes, grid.src, grid.dst).path.length;
 		switch (search) {
 			case "BFS":
 				console.time('bfs');
-				result = bfs(gridState.nodes, gridState.src, gridState.dst);
+				result = bfs(grid.nodes, grid.src, grid.dst);
 				console.timeEnd('bfs');
 				visualizeNormal(result.visited, result.path, animate);
 				break;
 			case "DFS":
-				result = dfs(gridState.nodes, gridState.src, gridState.dst, true);
+				result = dfs(grid.nodes, grid.src, grid.dst, true);
 				visualizeNormal(result.visited, result.path, animate);
 				break;
 			case "BDS":
 				console.time('bds');
-				result = bidirectionalSearch(gridState.nodes, gridState.src, gridState.dst);
+				result = bidirectionalSearch(grid.nodes, grid.src, grid.dst);
 				console.timeEnd('bds');
 				visualizeBidirectional(result.visited1, result.visited2, result.path, animate);
 				break;
 			case "GBFS":
 				console.time('gbfs');
-				result = gbfs(gridState.nodes, gridState.src, gridState.dst);
+				result = gbfs(grid.nodes, grid.src, grid.dst);
 				console.timeEnd('gbfs');
 				visualizeNormal(result.visited, result.path, animate);
 				break;
 			case "A*":
 				console.time('astar');
-				result = aStar(gridState.nodes, gridState.src, gridState.dst);
+				result = aStar(grid.nodes, grid.src, grid.dst);
 				console.timeEnd('astar');
 				visualizeNormal(result.visited, result.path, animate);
 				break;
@@ -346,13 +357,13 @@ function App() {
 				break;
 			case "JPS":
 				console.time('jps');
-				result = jps(gridState.nodes, gridState.src, gridState.dst);
+				result = jps(grid.nodes, grid.src, grid.dst);
 				console.timeEnd('jps');
 				visualizeNormal(result.visited, result.path, false);
 				break;
 			case "UCS":
 				console.time('ucs');
-				result = ucs(gridState.nodes, gridState.src, gridState.dst);
+				result = ucs(grid.nodes, grid.src, grid.dst);
 				console.timeEnd('jps');
 				visualizeNormal(result.visited, result.path, animate);
 				break;
@@ -429,17 +440,6 @@ function App() {
 		}
 	}
 
-	/**
-	 * Resize grid to fit full screen on initial load.
-	 */
-	useEffect(() => {
-		const dim = container.current.getBoundingClientRect();
-		const rows = Math.floor(dim.height / (cellSize - 1)) + 1;
-		const cols = Math.floor(dim.width / (cellSize - 1)) + 1;
-		dispatch({type: "resize", payload: {rows, cols}});
-	}, []);
-
-
 	useEffect(() => {
 		function setSize() {
 			const dim = container.current.getBoundingClientRect();
@@ -453,6 +453,7 @@ function App() {
 			//console.log("Rows: " + rows + " | Cols: " + cols);
 			dispatch({type: "resize", payload: {rows, cols}});
 		}
+		setSize();
 		window.addEventListener("resize", setSize);
 		return () => {
 		    window.removeEventListener("resize", setSize);

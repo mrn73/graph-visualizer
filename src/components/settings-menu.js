@@ -46,6 +46,7 @@ function SettingsMenu(props) {
 	}
 
 	const applyChanges = () => {
+		console.log(settings);
 		props.changeSettings(settings);
 		setApplyDisabled(true);
 	}
