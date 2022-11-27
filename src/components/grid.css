@@ -23,66 +23,66 @@
 }
 
 /*blocked cell */
-.type2 {
+.type9 {
 	background-color: #363636;
 	animation-duration: .1s;
 	animation-name: shrink;
 }
 
 /* start cell */
-.type3 {
+.type10 {
 	background-color: green;
 }
 
 /* end cell */
-.type4 {
+.type11 {
 	background-color: red;
 }
 
 /* explored cell */
-.type5 {
+.type12 {
 	animation-name: explored;
 	animation-duration: 1s;
 	animation-fill-mode: forwards;
 }
 
 /* path */
-.type6 {
+.type13 {
 	background-color: yellow;
 }
 
 /* deep water */
-.type7 {
+.type2 {
 	background-color: #011156;
 }
 
 /* water */
-.type8 {
+.type3 {
 	background-color: #057cfa;
 }
 
 /* sand */
-.type9 {
+.type4 {
 	background-color: #C2B280;
 }
 
 /* forest */
-.type10 {
+.type5 {
 	background-color: #004c1c;
 }
 
 /* grassland */
-.type11 {
+.type6 {
 	background-color: #5be087;
 }
 
 /* rock */
-.type12 {
+.type7 {
 	background-color: #9ea196;
 }
 
 /* snow */
-.type13 {
+.type8 {
 	background-color: #e5e5e3;	
 }
 
