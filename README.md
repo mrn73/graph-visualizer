@@ -1,5 +1,4 @@
-# Pathfinder
-
+# Pathfinder: https://mrn73.github.io/graph-visualizer/
 Pathfinding application that visually displays 8 algorithms:
   - Breadth-First Search (BFS)
   - Depth-First Search (DFS)
@@ -10,7 +9,7 @@ Pathfinding application that visually displays 8 algorithms:
   - Hierarchical Pathfinding A* (HPA*)
   - Jump-Point Search (JPS)
 
-## Acknowledgents
+## Acknowledgements
 ### HPA*
   - https://webdocs.cs.ualberta.ca/~mmueller/ps/hpastar.pdf
 ### JPS
