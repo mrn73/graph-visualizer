@@ -8,7 +8,6 @@
 .gridContainer {
 	flex-grow: 1;
 	overflow: hidden;
-	background-color: blue;
 }
 
 .header > p, h1, h2, h3 {

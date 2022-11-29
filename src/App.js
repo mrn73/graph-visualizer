@@ -319,7 +319,7 @@ function App() {
 
 	const doSearch = (animate=true, grid=gridState) => {
 		let result;
-		const optLen = aStar(grid.nodes, grid.src, grid.dst).path.length;
+		const optLen = aStar(grid.nodes, grid.src, grid.dst).path.length - 1;
 		switch (search) {
 			case "BFS":
 				console.time('bfs');
@@ -375,14 +375,14 @@ function App() {
 				"Operations (Abstract Graph)": result.absPathOps,
 				"Operations (Real Graph)": result.realPathOps,
 				"Total Operations": result.ops, 
-				Length: result.path.length, 
+				Length: result.path.length - 1, 
 				"True shortest length": optLen
 			});
 		} else {
 			setPrevSearchInfo({
 				Search: search,
 				Operations: result.ops, 
-				Length: result.path.length, 
+				Length: result.path.length - 1, 
 				"True shortest length": optLen
 			});
 		}
